@@ -22,6 +22,21 @@
     "corners": "soft",
     "header": "light"
   },
+  "i18n": {
+    "default": "ar",
+    "locales": [
+      "ar",
+      "en"
+    ]
+  },
+  "storage": {
+    "data": {
+      "provider": "github-json"
+    },
+    "audio": {
+      "provider": "github-releases"
+    }
+  },
   "sheikhs": [
     {
       "key": "عبدالله_محمود",

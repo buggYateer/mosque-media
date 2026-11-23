@@ -228,7 +228,7 @@ def main():
         c = conf.get(sh["key"], {})
         sh["main"] = bool(c.get("main"))
         for ext in ("jpg", "jpeg", "png", "webp"):
-            if (SITE / "web" / "img" / "sheikhs" / f"{sh['key']}.{ext}").exists():
+            if (SITE / "public" / "img" / "sheikhs" / f"{sh['key']}.{ext}").exists():
                 sh["img"] = f"img/sheikhs/{sh['key']}.{ext}"
                 break
         sl = c.get("slug") or slugify(sh["key"])
@@ -249,8 +249,8 @@ def main():
     }
     if any(m.get("demo") for m in msgs):
         out["demo"] = True
-    (SITE / "web").mkdir(exist_ok=True)
-    (SITE / "web" / "lessons.json").write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    (SITE / "content").mkdir(exist_ok=True)
+    (SITE / "content" / "lessons.json").write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
 
     print(f"✓ lessons.json: {len(lessons)} مقطع | في سلاسل: {len(in_series)} | مشايخ: {len(out_sheikhs)}")
     for sh in out_sheikhs:

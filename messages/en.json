@@ -1,0 +1,50 @@
+{
+  "meta": {
+    "language": "English"
+  },
+  "nav": {
+    "home": "Home",
+    "weekly": "Weekly lessons",
+    "series": "Series",
+    "khutab": "Friday sermons",
+    "all": "All recordings",
+    "menu": "Menu",
+    "search": "Search",
+    "telegram": "Telegram channel",
+    "themeDark": "Dark mode",
+    "themeLight": "Light mode",
+    "language": "Language"
+  },
+  "kinds": {
+    "lesson": "Lessons",
+    "khutba": "Friday sermons",
+    "tilawa": "Recitations",
+    "other": "Other"
+  },
+  "home": {
+    "listenLatest": "Listen to the latest lesson",
+    "browseSeries": "Browse series",
+    "stats": {
+      "lessons": "recordings",
+      "sheikhs": "sheikhs & speakers",
+      "series": "series",
+      "khutab": "sermons"
+    },
+    "weekly": "Weekly lessons",
+    "sheikh": "Sheikh",
+    "clips": "{count, plural, =0 {No recordings} one {# recording} other {# recordings}}"
+  },
+  "foundation": {
+    "title": "Foundation check (phase 0)",
+    "note": "This page is temporary: it shows that settings, colors, languages and data are wired up. The real pages arrive in phase 1.",
+    "font": "Font",
+    "corners": "Corners",
+    "header": "Header",
+    "locale": "Language",
+    "direction": "Direction",
+    "data": "Data storage",
+    "audio": "Audio storage",
+    "rtl": "Right to left",
+    "ltr": "Left to right"
+  }
+}

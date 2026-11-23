@@ -1,0 +1,93 @@
+/**
+ * The storage contract. Pages and the dashboard only talk to these interfaces,
+ * so a mosque can keep its data in JSON files on GitHub (default), Supabase,
+ * Postgres, … without any change to the site code.
+ *
+ * To add a new provider: implement DataStore and/or AudioStore in a new file under
+ * lib/storage/, register it in lib/storage/index.ts, and add its name to the
+ * provider enum in lib/config.ts.
+ */
+import { z } from "zod";
+
+export const KINDS = ["lesson", "khutba", "tilawa", "other"] as const;
+export type Kind = (typeof KINDS)[number];
+
+/** One recording. Short keys keep lessons.json small (it is produced by tools/build_data.py). */
+export const lessonSchema = z.object({
+  t: z.string(), // title
+  s: z.string(), // sheikh key
+  k: z.enum(KINDS), // kind
+  d: z.string().default(""), // duration "m:ss" / "h:mm:ss"
+  h: z.string().default(""), // hijri date "d-m-yyyy" or free text
+  p: z.number().int().default(0), // number of audio parts available (0 = Telegram only)
+  n: z.number().int().optional(), // number inside a series
+  v: z.number().int().optional(), // Telegram views
+});
+export type Lesson = z.infer<typeof lessonSchema>;
+
+const sectionSchema = z.object({ t: z.string().default(""), ids: z.array(z.number().int()) });
+const seriesSchema = z.object({ key: z.string(), title: z.string(), sections: z.array(sectionSchema) });
+
+export const sheikhDataSchema = z.object({
+  key: z.string(),
+  name: z.string(),
+  slug: z.string(),
+  main: z.boolean().default(false),
+  img: z.string().optional(),
+  lesson: z.array(z.number().int()).default([]),
+  khutba: z.array(z.number().int()).default([]),
+  tilawa: z.array(z.number().int()).default([]),
+  other: z.array(z.number().int()).default([]),
+  series: z.array(seriesSchema).optional(),
+});
+export type SheikhData = z.infer<typeof sheikhDataSchema>;
+export type Series = z.infer<typeof seriesSchema>;
+
+export const librarySchema = z.object({
+  channel: z.string(),
+  audioBase: z.string(),
+  demo: z.boolean().optional(),
+  sheikhs: z.array(sheikhDataSchema),
+  collections: z
+    .array(z.object({ key: z.string(), title: z.string(), label: z.string().optional(), icon: z.string().optional(), ids: z.array(z.number().int()) }))
+    .default([]),
+  lessons: z.record(z.string(), lessonSchema),
+});
+export type Library = z.infer<typeof librarySchema>;
+
+/** Edits made from the /lawha dashboard, applied on top of the library. */
+export const overridesSchema = z.object({
+  edit: z
+    .record(
+      z.string(),
+      z.object({
+        t: z.string().optional(),
+        s: z.string().optional(),
+        k: z.enum(KINDS).optional(),
+        h: z.string().optional(),
+        hidden: z.boolean().optional(),
+        series: z.string().optional(),
+        sec: z.string().optional(),
+      }),
+    )
+    .default({}),
+  add: z.record(z.string(), lessonSchema.extend({ series: z.string().optional(), sec: z.string().optional() })).default({}),
+  featured: z.array(z.number().int()).default([]),
+  ignore: z.array(z.number().int()).default([]),
+});
+export type Overrides = z.infer<typeof overridesSchema>;
+
+export interface DataStore {
+  /** Human-readable provider name, shown in the dashboard. */
+  readonly name: string;
+  getLibrary(): Promise<Library>;
+  getOverrides(): Promise<Overrides>;
+  /** Phase 3 (dashboard): persist dashboard edits. */
+  saveOverrides?(overrides: Overrides, message: string): Promise<void>;
+}
+
+export interface AudioStore {
+  readonly name: string;
+  /** Public URL of one audio part (1-based). */
+  audioUrl(id: number, part: number, lesson: Lesson): string;
+}
