@@ -1,0 +1,9 @@
+# ملفات الصوت على جهازك (بتترفع على GitHub Releases مش جوه المستودع)
+data/audio/
+# أسرار — عمرها ما تترفع
+data/bot_token.txt
+.env
+# مؤقت
+data/bot_state.json
+__pycache__/
+.vercel/

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>لوحة التحكم — {{name}}</title>
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<link href="{{fontUrl}}" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,500,1,0&icon_names=add_circle,arrow_upward,cloud_upload,dashboard,delete,edit,library_music,logout,open_in_new,publish,refresh,search,star,undo,visibility_off,warning&display=block" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/theme.css">
+<link rel="stylesheet" href="/lawha/lawha.css">
+</head>
+<body class="lw">
+<header class="lw-top"><div class="lw-wrap">
+  <b class="lw-brand"><img src="/logo-mark.svg" alt="">لوحة التحكم</b>
+  <span class="lw-sp"></span>
+  <a class="lw-ic" href="/" target="_blank" rel="noopener" title="فتح الموقع"><span class="ms">open_in_new</span></a>
+  <button class="lw-pub" id="pubBtn" hidden disabled><span class="ms">publish</span><span id="pubTxt">نشر</span><b id="pubN" hidden>0</b></button>
+  <button class="lw-ic" id="outBtn" hidden title="خروج"><span class="ms">logout</span></button>
+</div></header>
+<nav class="lw-tabs" id="tabs" hidden><div class="lw-wrap"></div></nav>
+<main class="lw-wrap lw-main" id="ad"></main>
+<div class="lw-modal" id="modal" hidden><div class="lw-sheet" id="sheet"></div></div>
+<div class="lw-toast" id="toast"></div>
+<script src="/site.js"></script>
+<script src="/lawha/admin.js"></script>
+</body>
+</html>

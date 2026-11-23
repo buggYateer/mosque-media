@@ -1,0 +1,37 @@
+name: نقل الصوت الجديد للـ Releases
+# الداشبورد بترفع الصوت في incoming/<رقم الرسالة>.mp3 — هنا بيتنقل لـ Release audio-N ويتمسح من المستودع
+on:
+  push:
+    branches: [main]
+    paths: ["incoming/**"]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: { group: incoming, cancel-in-progress: false }
+jobs:
+  move:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: رفع الملفات على Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          shopt -s nullglob
+          moved=0
+          for f in incoming/*.mp3; do
+            id=$(basename "$f" .mp3)
+            case "$id" in (*[!0-9_]*|'') echo "اسم غلط: $f"; continue;; esac
+            num=${id%%_*}
+            tag="audio-$((num / 500))"
+            gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --title "صوتيات $tag" --notes "ملفات صوت الموقع"
+            gh release upload "$tag" "$f" --clobber
+            git rm -q "$f"
+            moved=$((moved + 1))
+          done
+          if [ "$moved" -gt 0 ]; then
+            git config user.name "github-actions"
+            git config user.email "github-actions@users.noreply.github.com"
+            git commit -qm "نقل $moved ملف صوت للـ Releases"
+            git push
+          fi

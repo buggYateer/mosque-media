@@ -1,0 +1,81 @@
+{
+  "name": "مسجد النور",
+  "shortName": "مسجد النور",
+  "description": "دروس وخطب وتلاوات مسجد النور — استمع من الموقع مباشرة",
+  "domain": "https://masjed-alnoor.vercel.app",
+  "telegramChannel": "your_channel",
+  "githubRepo": "YOUR_GITHUB_USERNAME/masjed-site",
+  "audioBase": "",
+  "colors": {
+    "primary": "#0f766e",
+    "highlight": "#f59e0b",
+    "background": "#f7f7f5",
+    "tones": [
+      "#0f766e",
+      "#7c3aed",
+      "#b45309",
+      "#be123c"
+    ]
+  },
+  "design": {
+    "font": "Cairo",
+    "corners": "soft",
+    "header": "light"
+  },
+  "sheikhs": [
+    {
+      "key": "عبدالله_محمود",
+      "name": "عبدالله محمود",
+      "aliases": [
+        "عبدالله"
+      ],
+      "main": true,
+      "day": "درس الثلاثاء",
+      "tone": 1
+    },
+    {
+      "key": "خالد_إبراهيم",
+      "name": "خالد إبراهيم",
+      "aliases": [
+        "خالد"
+      ],
+      "main": true,
+      "day": "درس الخميس",
+      "tone": 2
+    },
+    {
+      "key": "يوسف_حسن",
+      "name": "يوسف حسن",
+      "aliases": [
+        "يوسف"
+      ],
+      "main": false,
+      "tone": 3
+    }
+  ],
+  "kinds": {
+    "khutba": [
+      "#خطبة_الجمعة",
+      "خطبة"
+    ],
+    "tilawa": [
+      "تلاوة",
+      "صلاة العشاء",
+      "صلاة الفجر"
+    ],
+    "other": [
+      "أذان",
+      "إعلان"
+    ]
+  },
+  "collections": [
+    {
+      "key": "ramadan",
+      "title": "ليالي رمضان",
+      "label": "التراويح والتهجد",
+      "icon": "bedtime",
+      "match": "رمضان"
+    }
+  ],
+  "ignore": []
+}

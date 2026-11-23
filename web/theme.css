@@ -1,0 +1,7 @@
+/* بيتولد من site.config.json — متعدلش هنا */
+:root{--primary:#0f766e;--primary-d:#0b5c55;--hl:#f59e0b;--bg:#f7f7f5;--tint:#e2eeed;--r:12px;--font:"Cairo",system-ui,sans-serif}
+:root[data-theme="dark"]{--tint:#042321}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--tint:#042321}}
+.t1{--tone:#0f766e}
+.t2{--tone:#7c3aed}
+.t3{--tone:#b45309}
+.t4{--tone:#be123c}
