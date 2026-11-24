@@ -32,7 +32,7 @@ export function LessonActions({ item }: { item: Item }) {
       {item.p ? (
         <>
           <button onClick={() => p.play(item, [item])} className="inline-flex h-11 items-center gap-2 rounded-lg bg-highlight px-5 font-extrabold text-highlight-foreground hover:bg-highlight/90">
-            {playing ? <Pause className="size-5 fill-current" /> : <Play className="size-5 fill-current rtl:-scale-x-100" />}
+            {playing ? <Pause className="size-5 fill-current" /> : <Play className="size-5 fill-current" />}
             {t("listen")}
           </button>
           <a

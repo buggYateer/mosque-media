@@ -64,7 +64,7 @@ export function PlayButton({ item, list, className, size = "md" }: { item: Item;
         className,
       )}
     >
-      {playing ? <Pause className="size-5 fill-current" /> : <Play className="size-5 fill-current rtl:-scale-x-100" />}
+      {playing ? <Pause className="size-5 fill-current" /> : <Play className="size-5 fill-current" />}
     </button>
   );
 }
