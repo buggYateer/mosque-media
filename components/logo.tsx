@@ -14,8 +14,13 @@ const logoFile = ["svg", "png"].find((ext) => existsSync(join(process.cwd(), "pu
 /** The mosque logo from assets/ (copied to public/brand/ by scripts/prepare.mjs), or a letter placeholder. */
 export function Logo({ className }: { className?: string }) {
   if (logoFile) {
-    // eslint-disable-next-line @next/next/no-img-element -- tiny local logo, no optimization needed
-    return <img src={`/brand/logo.${logoFile}`} alt="" className={cn("size-9 rounded-md object-contain", className)} />;
+    // On a box in the mosque's color (like the app icon), so white or light logos stay visible on any header.
+    return (
+      <span aria-hidden className={cn("grid size-9 place-items-center rounded-md bg-primary p-1 ring-2 ring-header-foreground/15", className)}>
+        {/* eslint-disable-next-line @next/next/no-img-element -- tiny local logo, no optimization needed */}
+        <img src={`/brand/logo.${logoFile}`} alt="" className="size-full object-contain" />
+      </span>
+    );
   }
   return (
     <span
