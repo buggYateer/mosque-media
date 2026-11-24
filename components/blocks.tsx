@@ -107,7 +107,7 @@ export async function SeriesCard({ se, sh }: { se: Series; sh: SheikhData }) {
       <div className="mm-card-body px-3.5 pt-2.5 pb-3">
         <h3 className="line-clamp-2 text-[15.5px] font-bold">{se.title}</h3>
         <p className="mm-card-sub mt-0.5 text-[13.5px] text-muted-foreground">
-          {t("common.sheikh")} {sh.name} · {t("common.lessonsCount", { count: seriesIds(se).length })}
+          {t("common.sheikh")} <bdi>{sh.name}</bdi> · {t("common.lessonsCount", { count: seriesIds(se).length })}
         </p>
       </div>
     </Link>

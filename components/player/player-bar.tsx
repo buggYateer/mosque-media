@@ -127,7 +127,7 @@ export function PlayerBar() {
   ) : L.sh ? (
     <>
       <Link href={`/s/${L.sh.slug}`} className="text-primary hover:underline" onClick={() => ex && p.setExpanded(false)}>
-        {t("common.sheikh")} {L.sh.name}
+        {t("common.sheikh")} <bdi>{L.sh.name}</bdi>
       </Link>
       {L.se ? (
         <>

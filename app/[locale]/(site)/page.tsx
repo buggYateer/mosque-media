@@ -47,7 +47,7 @@ export default async function Home() {
             <small className="mm-feature-tag font-bold opacity-80">{t("home.latestLesson")}</small>
             <h2 className="text-2xl font-extrabold">{feature.t}</h2>
             <p className="mb-3 opacity-85">
-              {feature.sh ? `${t("common.sheikh")} ${feature.sh.name}` : ""}
+              {feature.sh ? <>{t("common.sheikh")} <bdi>{feature.sh.name}</bdi></> : ""}
               {feature.h ? ` — ${hijri(feature.h)}` : ""}
             </p>
             <FeaturePlay item={feature} label={t("home.listenLesson")} />

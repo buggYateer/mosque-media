@@ -58,7 +58,7 @@ export default async function LessonPage({ params }: PageProps<"/[locale]/l/[id]
           <p className="text-muted-foreground">
             {item.sh ? (
               <Link href={`/s/${item.sh.slug}`} className="font-semibold text-primary hover:underline">
-                {t("common.sheikh")} {item.sh.name}
+                {t("common.sheikh")} <bdi>{item.sh.name}</bdi>
               </Link>
             ) : null}
             {item.sh && item.se ? (
