@@ -23,7 +23,7 @@ export function DrawerSheet({ groups, open, setOpen }: { groups: NavGroup[]; ope
   return (
     <>
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side={rtl ? "right" : "left"} className="w-[min(300px,84vw)] gap-0 overflow-y-auto p-3" showCloseButton={false}>
+        <SheetContent side={rtl ? "right" : "left"} className="mm-drawer w-[min(300px,84vw)] gap-0 overflow-y-auto p-3" showCloseButton={false}>
           <SheetTitle className="sr-only">{t("menu")}</SheetTitle>
           <div className="mb-2 flex items-center gap-2">
             <form
@@ -46,7 +46,7 @@ export function DrawerSheet({ groups, open, setOpen }: { groups: NavGroup[]; ope
           <nav>
             {groups.map((g) => (
               <div key={g.title}>
-                <h4 className="mx-2 mt-4 mb-1 text-[12.5px] font-bold text-muted-foreground">{g.title}</h4>
+                <h4 className="mm-drawer-h mx-2 mt-4 mb-1 text-[12.5px] font-bold text-muted-foreground">{g.title}</h4>
                 {g.items.map((it) => {
                   const Icon = iconFor(it.icon);
                   const here = pathname === it.href;

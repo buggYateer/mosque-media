@@ -144,7 +144,7 @@ export function PlayerBar() {
 
   if (ex)
     return (
-      <div role="dialog" aria-label={t("player.nowPlaying")} className="fixed inset-0 z-40 overflow-y-auto bg-background">
+      <div role="dialog" aria-label={t("player.nowPlaying")} className="mm-player mm-player-full fixed inset-0 z-40 overflow-y-auto bg-background">
         <div className="mx-auto flex min-h-full max-w-lg flex-col justify-center gap-6 px-5 pt-20 pb-8">
           <div className="absolute inset-x-4 top-3 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
             <button className="grid size-11 place-items-center rounded-full bg-muted text-foreground" onClick={() => p.setExpanded(false)} aria-label={t("player.minimize")}>
@@ -152,7 +152,7 @@ export function PlayerBar() {
             </button>
             {t("player.nowPlaying")}
           </div>
-          <Cover tone={L.sh?.tone} kind={L.k} tag={L.se?.sec || L.se?.title || t(`kind.${L.k}`)} title={L.t} byline={L.sh ? `${t("common.sheikh")} ${L.sh.name}` : undefined} className="rounded-xl shadow-lg" />
+          <Cover pat={L.id} tone={L.sh?.tone} kind={L.k} tag={L.se?.sec || L.se?.title || t(`kind.${L.k}`)} title={L.t} byline={L.sh ? `${t("common.sheikh")} ${L.sh.name}` : undefined} className="rounded-xl shadow-lg" />
           <div className="text-center">
             <h2 className="text-2xl font-extrabold leading-snug">
               {L.n ? `${L.n}. ` : ""}
@@ -171,7 +171,7 @@ export function PlayerBar() {
     );
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-30 border-t bg-card/95 shadow-[0_-4px_20px_rgb(0_0_0/0.08)] backdrop-blur">
+    <div className="mm-player mm-player-mini fixed inset-x-0 bottom-0 z-30 border-t bg-card/95 shadow-[0_-4px_20px_rgb(0_0_0/0.08)] backdrop-blur">
       {/* Desktop: info · knobs · controls+seek · actions — knobs and actions line up with the controls row (48px). */}
       <div className="mx-auto grid max-w-6xl gap-2 px-3 py-2.5 md:grid-cols-[minmax(0,1fr)_auto_minmax(340px,520px)_minmax(0,1fr)] md:items-center md:gap-4 md:px-4">
         <div className="flex min-w-0 items-center gap-1">

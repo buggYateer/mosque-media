@@ -26,16 +26,16 @@ export default async function Home() {
   return (
     <main className="mx-auto max-w-6xl px-4 pt-5">
       <InstallBar />
-      <nav aria-label={t("nav.sections")} className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
+      <nav aria-label={t("nav.sections")} className="mm-cats grid grid-cols-2 gap-2.5 md:grid-cols-4">
         {cats.map((c) => {
           const Icon = iconFor(c.icon);
           return (
-            <Link key={c.href} href={c.href} className="flex items-center gap-3 rounded-xl border bg-card px-3.5 py-3 transition-colors hover:border-primary">
-              <span className="grid size-11 shrink-0 place-items-center rounded-lg bg-accent text-primary">
+            <Link key={c.href} href={c.href} className="mm-cat flex items-center gap-3 rounded-xl border bg-card px-3.5 py-3 transition-colors hover:border-primary">
+              <span className="mm-cat-icon grid size-11 shrink-0 place-items-center rounded-lg bg-accent text-primary">
                 <Icon className="size-6" />
               </span>
-              <b className="flex-1 text-[16px] leading-tight">{c.label ?? t(`nav.${c.key}` as "nav.lessons")}</b>
-              <small className="font-bold text-muted-foreground tabular-nums">{c.n}</small>
+              <b className="mm-cat-name flex-1 text-[16px] leading-tight">{c.label ?? t(`nav.${c.key}` as "nav.lessons")}</b>
+              <small className="mm-cat-n font-bold text-muted-foreground tabular-nums">{c.n}</small>
             </Link>
           );
         })}
@@ -43,8 +43,8 @@ export default async function Home() {
 
       <div className="mt-5 grid items-start gap-5 md:grid-cols-2">
         {feature ? (
-          <article className="flex h-full flex-col gap-1.5 rounded-xl bg-primary p-6 text-primary-foreground md:order-last dark:border dark:bg-card dark:text-card-foreground">
-            <small className="font-bold opacity-80">{t("home.latestLesson")}</small>
+          <article className="mm-feature flex h-full flex-col gap-1.5 rounded-xl bg-primary p-6 text-primary-foreground md:order-last dark:border dark:bg-card dark:text-card-foreground">
+            <small className="mm-feature-tag font-bold opacity-80">{t("home.latestLesson")}</small>
             <h2 className="text-2xl font-extrabold">{feature.t}</h2>
             <p className="mb-3 opacity-85">
               {feature.sh ? `${t("common.sheikh")} ${feature.sh.name}` : ""}

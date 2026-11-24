@@ -39,8 +39,9 @@ export default async function LessonPage({ params }: PageProps<"/[locale]/l/[id]
           ...(item.sh && item.se ? [{ href: `/s/${item.sh.slug}/${item.se.key}`, label: item.se.title }] : []),
         ]}
       />
-      <article className="mt-2 grid items-start gap-6 md:grid-cols-[minmax(0,420px)_1fr]">
+      <article className="mm-lesson-page mt-2 grid items-start gap-6 md:grid-cols-[minmax(0,420px)_1fr]">
         <Cover
+          pat={item.id}
           tone={item.sh?.tone}
           kind={item.k}
           tag={item.se?.sec || item.se?.title || t(`kind.${item.k}`)}

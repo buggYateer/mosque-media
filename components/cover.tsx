@@ -14,6 +14,7 @@ export const KIND_ICON = { lesson: BookText, khutba: Mic, tilawa: AudioLines, ot
  */
 export function Cover({
   tone,
+  pat = 0,
   kind,
   tag,
   title,
@@ -21,6 +22,8 @@ export function Cover({
   className,
 }: {
   tone?: number;
+  /** Any number (e.g. the recording id) — picks one of 5 pattern slots a theme can style via [data-pat]. */
+  pat?: number;
   kind?: Kind | "series";
   tag?: string;
   title: string;
@@ -29,9 +32,11 @@ export function Cover({
 }) {
   const Icon = kind === "series" ? BookOpen : KIND_ICON[kind ?? "lesson"];
   return (
-    <div aria-hidden className={cn("@container relative flex aspect-video items-end overflow-hidden p-4 text-white", toneBg(tone), className)}>
-      <Icon className="absolute top-3 end-3 size-8 opacity-55" />
-      <div className="flex max-w-[88%] flex-col leading-snug">
+    <div aria-hidden data-tone={tone ?? 1} data-pat={Math.abs(pat) % 5} className={cn("mm-cover @container relative flex aspect-video items-end overflow-hidden p-4 text-white", toneBg(tone), className)}>
+      <Icon className="mm-cover-icon absolute top-3 end-3 size-8 opacity-55" />
+      {/* Empty by default; a theme can show the mosque logo here. */}
+      <span className="mm-cover-logo" />
+      <div className="mm-cover-text flex max-w-[88%] flex-col leading-snug">
         {tag ? <small className="text-[12.5px] opacity-80">{tag}</small> : null}
         <b className="line-clamp-2 text-[clamp(15px,8cqw,22px)] font-extrabold">{title}</b>
         {byline ? <i className="text-[13px] not-italic opacity-85">{byline}</i> : null}

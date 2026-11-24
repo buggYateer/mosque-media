@@ -51,7 +51,7 @@ export default async function SheikhPage({ params }: PageProps<"/[locale]/s/[slu
   return (
     <main className="mx-auto max-w-6xl px-4 pt-5">
       <Crumbs items={[{ label: sh.name }]} />
-      <header className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b-2 pt-2 pb-4">
+      <header className="mm-sh-head mb-4 flex flex-wrap items-center justify-between gap-3 border-b-2 pt-2 pb-4">
         <div>
           <h1 className="text-3xl font-extrabold">
             {sh.main ? `${t("common.sheikh")} ` : ""}
@@ -68,10 +68,10 @@ export default async function SheikhPage({ params }: PageProps<"/[locale]/s/[slu
       {lastId !== undefined ? <LatestCard item={lk.item(lastId)} label={t("sheikh.latestClip")} /> : null}
 
       <div className="grid items-start gap-5 md:grid-cols-[250px_1fr]">
-        <nav aria-label={t("nav.sections")} className="sticky top-16 z-[5] -mx-4 flex gap-1.5 overflow-x-auto border-y bg-background px-4 py-2 md:top-20 md:mx-0 md:flex-col md:rounded-xl md:border md:bg-card md:p-2">
+        <nav aria-label={t("nav.sections")} className="mm-side sticky top-16 z-[5] -mx-4 flex gap-1.5 overflow-x-auto border-y bg-background px-4 py-2 md:top-20 md:mx-0 md:flex-col md:rounded-xl md:border md:bg-card md:p-2">
           {groups.map((g) => (
             <div key={g} className="contents md:block">
-              <h4 className="mx-2 mt-2 mb-1 hidden text-[12.5px] font-bold text-muted-foreground md:block">{groupTitle(g)}</h4>
+              <h4 className="mm-side-h mx-2 mt-2 mb-1 hidden text-[12.5px] font-bold text-muted-foreground md:block">{groupTitle(g)}</h4>
               {tabs
                 .filter((x) => x.group === g)
                 .map((x) => (
@@ -82,7 +82,7 @@ export default async function SheikhPage({ params }: PageProps<"/[locale]/s/[slu
                     scroll={false}
                     aria-current={x.id === active?.id ? "page" : undefined}
                     className={cn(
-                      "flex shrink-0 items-center justify-between gap-2 rounded-full border px-3 py-1.5 text-[15px] md:w-full md:rounded-lg md:border-0 md:px-2.5",
+                      "mm-tab flex shrink-0 items-center justify-between gap-2 rounded-full border px-3 py-1.5 text-[15px] md:w-full md:rounded-lg md:border-0 md:px-2.5",
                       x.id === active?.id ? "border-primary bg-primary font-bold text-primary-foreground" : "hover:bg-muted",
                     )}
                   >
@@ -97,15 +97,16 @@ export default async function SheikhPage({ params }: PageProps<"/[locale]/s/[slu
         <section>
           {series ? (
             <Cover
+              pat={series.sections[0]?.ids[0] ?? 0}
               tone={toneOf(config, sh.key)}
               kind="series"
               tag={/^سلسلة/.test(series.title) ? t("sheikh.seriesLabel") : t("sheikh.lessonsLabel")}
               title={cleanTitle(series.title)}
               byline={`${t("common.sheikh")} ${sh.name}`}
-              className="mb-3 aspect-auto min-h-40 rounded-xl"
+              className="mm-panel-cover mb-3 aspect-auto min-h-40 rounded-xl"
             />
           ) : null}
-          <div className="mb-2.5 flex items-center justify-between gap-3">
+          <div className="mm-panel-h mb-2.5 flex items-center justify-between gap-3">
             <div>
               {!series && active ? <h2 className="text-[21px] font-extrabold">{label(active)}</h2> : null}
               <p className="text-sm text-muted-foreground">{t("sheikh.panelCount", { count: ids.length })}</p>

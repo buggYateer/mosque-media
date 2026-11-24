@@ -10,7 +10,7 @@ import { LessonList, PlayButton, useHijri } from "./lesson-list";
 export function LatestCard({ item, label }: { item: Item; label: string }) {
   const hijri = useHijri();
   return (
-    <div className="mb-4 flex items-center gap-3.5 rounded-xl border border-s-[5px] border-s-highlight bg-card px-4 py-3.5">
+    <div className="mm-latest mb-4 flex items-center gap-3.5 rounded-xl border border-s-[5px] border-s-highlight bg-card px-4 py-3.5">
       <PlayButton item={item} list={[item]} size="lg" />
       <div className="min-w-0">
         <small className="font-bold text-muted-foreground">{label}</small>

@@ -62,7 +62,15 @@ for (const ext of ["svg", "png"]) {
     copyFileSync(src, join(brand, `logo.${ext}`));
   }
 }
-// 3) A tiny TTF subset (only the letters of the mosque name; TTF or WOFF) for the generated icons and share image.
+// 3) The mosque's own design layer: assets/custom.css (optional) → lib/generated/custom.css.
+//    It loads after the default design and can restyle anything through the mm-* class hooks.
+const customSrc = join(root, "assets", "custom.css");
+writeFileSync(
+  join(root, "lib", "generated", "custom.css"),
+  existsSync(customSrc) ? readFileSync(customSrc, "utf8") : "/* No assets/custom.css — using the default design. */\n",
+);
+
+// 4) A tiny TTF subset (only the letters of the mosque name; TTF or WOFF) for the generated icons and share image.
 //    Downloaded from Google Fonts at build time; without internet the images just skip the text.
 const ttf = join(root, "lib", "generated", "brand-font.bin");
 try {

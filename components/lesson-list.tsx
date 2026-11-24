@@ -58,7 +58,7 @@ export function PlayButton({ item, list, className, size = "md" }: { item: Item;
       title={item.p ? undefined : t("telegramOnlyTitle")}
       aria-label={t("play", { title: item.t })}
       className={cn(
-        "grid shrink-0 place-items-center rounded-full border-[1.5px] border-primary text-primary transition-colors hover:bg-primary hover:text-primary-foreground disabled:border-border disabled:text-muted-foreground disabled:hover:bg-transparent",
+        "mm-play grid shrink-0 place-items-center rounded-full border-[1.5px] border-primary text-primary transition-colors hover:bg-primary hover:text-primary-foreground disabled:border-border disabled:text-muted-foreground disabled:hover:bg-transparent",
         size === "lg" ? "size-12" : "size-10",
         on && "bg-primary text-primary-foreground",
         className,
@@ -76,7 +76,8 @@ export function LessonRow({ item, list, showSheikh, showKind }: { item: Item; li
   const on = p.current?.id === item.id;
   return (
     <div
-      className={cn("flex cursor-pointer items-center gap-3 border-b px-3.5 py-2.5 last:border-b-0 hover:bg-muted/60", on && "bg-accent hover:bg-accent")}
+      data-playing={on || undefined}
+      className={cn("mm-row flex cursor-pointer items-center gap-3 border-b px-3.5 py-2.5 last:border-b-0 hover:bg-muted/60", on && "bg-accent hover:bg-accent")}
       onClick={(e) => {
         if (!(e.target as HTMLElement).closest("a,button") && item.p) p.play(item, list);
       }}
@@ -92,7 +93,7 @@ export function LessonRow({ item, list, showSheikh, showKind }: { item: Item; li
         </div>
         <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[13.5px] text-muted-foreground">
           {showSheikh && item.sh ? (
-            <Link href={`/s/${item.sh.slug}`} className="font-semibold text-primary hover:underline">
+            <Link href={`/s/${item.sh.slug}`} className="mm-row-sh font-semibold text-primary hover:underline">
               {item.sh.name}
             </Link>
           ) : null}
@@ -137,7 +138,7 @@ export function LessonList({
   }
   const list = queue ?? items;
   return (
-    <div className={cn("overflow-hidden rounded-xl border bg-card", className)}>
+    <div className={cn("mm-list overflow-hidden rounded-xl border bg-card", className)}>
       {items.length ? (
         items.slice(0, shown).map((it) => <LessonRow key={it.id} item={it} list={list} showSheikh={showSheikh} showKind={showKind} />)
       ) : (
@@ -159,15 +160,16 @@ export function LessonCard({ item, list }: { item: Item; list: Item[] }) {
     <button
       onClick={() => p.play(item, list)}
       disabled={!item.p}
-      className="flex flex-col overflow-hidden rounded-xl border bg-card text-start transition-colors hover:border-primary disabled:opacity-60"
+      className="mm-card mm-lesson-card flex flex-col overflow-hidden rounded-xl border bg-card text-start transition-colors hover:border-primary disabled:opacity-60"
     >
-      <Cover tone={item.sh?.tone} kind={item.k} tag={item.se?.sec || item.se?.title || t(`kind.${item.k}`)} title={item.t} byline={item.sh ? `${t("common.sheikh")} ${item.sh.name}` : undefined} />
-      <div className="px-3.5 pt-2.5 pb-3">
+      <Cover
+        pat={item.id} tone={item.sh?.tone} kind={item.k} tag={item.se?.sec || item.se?.title || t(`kind.${item.k}`)} title={item.t} byline={item.sh ? `${t("common.sheikh")} ${item.sh.name}` : undefined} />
+      <div className="mm-card-body px-3.5 pt-2.5 pb-3">
         <h3 className="line-clamp-2 text-[15.5px] font-bold">
           <KindBadge kind={item.k} />
           {item.t}
         </h3>
-        {item.sh ? <p className="mt-0.5 text-[13.5px] text-muted-foreground">{item.sh.name}</p> : null}
+        {item.sh ? <p className="mm-card-sub mt-0.5 text-[13.5px] text-muted-foreground">{item.sh.name}</p> : null}
       </div>
     </button>
   );

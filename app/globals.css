@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+/* The mosque's own design (assets/custom.css, copied by scripts/prepare.mjs). Unlayered, so it overrides the defaults. */
+@import "../lib/generated/custom.css";
 
 /* The color values themselves come from site.config.json (lib/theme.ts → <style> in the layout).
    This file only maps them to Tailwind utilities (bg-primary, text-highlight, bg-tone-1 …). */
