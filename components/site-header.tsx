@@ -1,4 +1,5 @@
-import { Send } from "lucide-react";
+import { Languages, Send } from "lucide-react";
+import { Suspense } from "react";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { config } from "@/lib/config";
@@ -48,7 +49,9 @@ export async function SiteHeader() {
             </Link>
           ))}
         </nav>
-        <LocaleSwitcher />
+        <Suspense fallback={<Languages className="mx-2 size-4.5 opacity-60" />}>
+          <LocaleSwitcher />
+        </Suspense>
         <ThemeToggle />
         <SearchBar />
         <a

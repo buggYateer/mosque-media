@@ -7,7 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { routing } from "@/i18n/routing";
 import { config, RTL_LOCALES, type Locale } from "@/lib/config";
-import { siteFont } from "@/lib/generated/font";
+import { scriptFonts, siteFont } from "@/lib/generated/font";
 import { themeCss } from "@/lib/theme";
 import "../globals.css";
 
@@ -38,7 +38,7 @@ export default async function RootLayout({ children }: LayoutProps<"/[locale]">)
   if (!hasLocale(routing.locales, locale)) notFound();
   const dir = RTL_LOCALES.includes(locale as Locale) ? "rtl" : "ltr";
   return (
-    <html lang={locale} dir={dir} className={siteFont.variable} suppressHydrationWarning>
+    <html lang={locale} dir={dir} className={[siteFont.variable, scriptFonts[locale]?.variable].filter(Boolean).join(" ")} suppressHydrationWarning>
       <head>
         <style>{themeCss(config)}</style>
       </head>

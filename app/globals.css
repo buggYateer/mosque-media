@@ -10,8 +10,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans), system-ui, sans-serif;
-  --font-heading: var(--font-sans), system-ui, sans-serif;
+  --font-sans: var(--font-script, var(--font-site)), var(--font-site), system-ui, sans-serif;
+  --font-heading: var(--font-script, var(--font-site)), var(--font-site), system-ui, sans-serif;
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -53,6 +53,11 @@
 .dark {
   --destructive: oklch(0.704 0.191 22.216);
   color-scheme: dark;
+}
+
+/* Nastaliq (Urdu) needs more vertical room. */
+:lang(ur) body {
+  line-height: 2;
 }
 
 @layer base {

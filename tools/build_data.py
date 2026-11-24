@@ -97,6 +97,11 @@ def kind_of(m, text):
 
 
 SHEIKHS = CFG["sheikhs"]
+# كلمات بتسبق اسم الشيخ في الوصف، بكل لغة (من site.config.json → sheikhPrefixes)
+PREFIXES = CFG.get("sheikhPrefixes") or ["الشيخ", "ش"]
+PREFIX_RE = "|".join(re.escape(norm(x)) + (r"\.?" if len(x) <= 2 else "") for x in sorted(PREFIXES, key=len, reverse=True))
+# لاكتشاف شيخ مش في الإعدادات بنستخدم الكلمات الطويلة بس (علشان «ش» لوحدها متمسكش أي كلمة)
+PREFIX_LONG_RE = "|".join(re.escape(x) for x in sorted((x for x in PREFIXES if len(x) >= 3), key=len, reverse=True)) or "الشيخ"
 
 
 def sheikh_of(m, text):
@@ -105,13 +110,13 @@ def sheikh_of(m, text):
     for sh in SHEIKHS:
         if " " + norm(sh["name"]) + " " in s or norm(sh["key"]) in s:
             return sh["key"]
-    # 2) الاسم المختصر بعد «الشيخ» أو «ش» أو هاشتاج
+    # 2) الاسم المختصر بعد كلمة زي «الشيخ» أو «ش» أو «مولانا» أو «Шейх» (sheikhPrefixes في الإعدادات) أو هاشتاج
     for sh in SHEIKHS:
         for a in sh.get("aliases", []):
-            if re.search(r"(?:الشيخ|ش\.?|#)\s*" + re.escape(norm(a)) + r"(?:\s|$)", s):
+            if re.search(r"(?:" + PREFIX_RE + r"|#)\s*" + re.escape(norm(a)) + r"(?:\s|$)", s):
                 return sh["key"]
     # 3) شيخ مش في الإعدادات: «الشيخ فلان الفلاني»
-    r = re.search(r"(?:ال|لل)شيخ\s*#?(\S+)[ _](\S+)", text)
+    r = re.search(r"(?:للشيخ|" + PREFIX_LONG_RE + r")\s+#?(\S+)[ _](\S+)", text, re.IGNORECASE)
     if r:
         return f"{r.group(1)}_{r.group(2)}".strip(" –-.,،")
     return ""

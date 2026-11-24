@@ -26,7 +26,10 @@
     "default": "ar",
     "locales": [
       "ar",
-      "en"
+      "en",
+      "ur",
+      "hi",
+      "ru"
     ]
   },
   "storage": {
@@ -83,6 +86,14 @@
       "إعلان"
     ]
   },
+  "sheikhPrefixes": [
+    "الشيخ",
+    "ش",
+    "Sheikh",
+    "Shaykh",
+    "مولانا",
+    "Шейх"
+  ],
   "collections": [
     {
       "key": "ramadan",

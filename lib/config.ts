@@ -69,6 +69,8 @@ const configSchema = z
       .default({ data: { provider: "github-json" }, audio: { provider: "github-releases" } }),
     sheikhs: z.array(sheikhSchema),
     kinds: z.record(z.string(), z.array(z.string())).default({}),
+    /** Words before a sheikh's name in captions, per language (used by tools/build_data.py). */
+    sheikhPrefixes: z.array(z.string()).default(["الشيخ", "ش", "Sheikh", "Shaykh", "مولانا", "Шейх"]),
     collections: z
       .array(z.object({ key: z.string(), title: z.string(), label: z.string().optional(), icon: z.string().optional(), match: z.string().optional() }))
       .default([]),
