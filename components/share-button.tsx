@@ -2,24 +2,28 @@
 
 import { Link2, MessageCircle, Send, Share2 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { toast } from "sonner";
+import { useSyncExternalStore } from "react";
 import { routing } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
+import { MiniMenu, showToast } from "./mini-menu";
 
 /** Full URL of a page in the current language (the default language has no prefix). */
 export function useAbsoluteUrl() {
   const locale = useLocale();
   return (path: string) => {
     const prefix = locale === routing.defaultLocale ? "" : `/${locale}`;
-    return location.origin + (prefix + (path === "/" ? "" : path) || "/");
+    return (typeof location === "undefined" ? "" : location.origin) + (prefix + (path === "/" ? "" : path) || "/");
   };
 }
 
 export function ShareButton({ path, title, variant = "button", className }: { path: string; title: string; variant?: "button" | "icon"; className?: string }) {
   const t = useTranslations("common");
   const abs = useAbsoluteUrl();
-  const canNative = typeof navigator !== "undefined" && "share" in navigator;
+  const canNative = useSyncExternalStore(
+    () => () => {},
+    () => "share" in navigator,
+    () => false,
+  );
 
   const copy = async () => {
     const url = abs(path);
@@ -33,48 +37,32 @@ export function ShareButton({ path, title, variant = "button", className }: { pa
       document.execCommand("copy");
       ta.remove();
     }
-    toast(t("copied"));
+    showToast(t("copied"));
   };
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        aria-label={t("share")}
-        className={cn(
-          variant === "icon"
-            ? "grid size-10 shrink-0 place-items-center rounded-full hover:bg-muted"
-            : "inline-flex h-10 items-center gap-2 rounded-lg border bg-card px-3.5 text-sm font-semibold hover:bg-muted",
-          className,
-        )}
-      >
-        <Share2 className="size-5 text-primary" />
-        {variant === "button" ? <span className="max-sm:hidden">{t("share")}</span> : null}
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="min-w-44">
-        <DropdownMenuItem onClick={copy}>
-          <Link2 className="text-primary" />
-          {t("copyLink")}
-        </DropdownMenuItem>
-        {canNative ? (
-          <DropdownMenuItem onClick={() => navigator.share({ title, url: abs(path) }).catch(() => {})}>
-            <Share2 className="text-primary" />
-            {t("shareVia")}
-          </DropdownMenuItem>
-        ) : (
-          <>
-            <DropdownMenuItem render={<a href={`https://wa.me/?text=${encodeURIComponent(`${title}\n${typeof location !== "undefined" ? abs(path) : ""}`)}`} target="_blank" rel="noopener" />}>
-              <MessageCircle className="text-primary" />
-              {t("whatsapp")}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              render={<a href={`https://t.me/share/url?url=${encodeURIComponent(typeof location !== "undefined" ? abs(path) : "")}&text=${encodeURIComponent(title)}`} target="_blank" rel="noopener" />}
-            >
-              <Send className="text-primary rtl:-scale-x-100" />
-              {t("telegram")}
-            </DropdownMenuItem>
-          </>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <MiniMenu
+      label={t("share")}
+      align="end"
+      triggerClass={cn(
+        variant === "icon" ? "grid size-10 shrink-0 place-items-center rounded-full hover:bg-muted" : "inline-flex h-10 items-center gap-2 rounded-lg border bg-card px-3.5 text-sm font-semibold hover:bg-muted",
+        className,
+      )}
+      trigger={
+        <>
+          <Share2 className="size-5 text-primary" />
+          {variant === "button" ? <span className="max-sm:hidden">{t("share")}</span> : null}
+        </>
+      }
+      items={[
+        { key: "copy", label: <><Link2 className="size-4 text-primary" />{t("copyLink")}</>, onSelect: copy },
+        ...(canNative
+          ? [{ key: "native", label: <><Share2 className="size-4 text-primary" />{t("shareVia")}</>, onSelect: () => void navigator.share({ title, url: abs(path) }).catch(() => {}) }]
+          : [
+              { key: "wa", label: <><MessageCircle className="size-4 text-primary" />{t("whatsapp")}</>, href: `https://wa.me/?text=${encodeURIComponent(`${title}\n${abs(path)}`)}` },
+              { key: "tg", label: <><Send className="size-4 text-primary rtl:-scale-x-100" />{t("telegram")}</>, href: `https://t.me/share/url?url=${encodeURIComponent(abs(path))}&text=${encodeURIComponent(title)}` },
+            ]),
+      ]}
+    />
   );
 }

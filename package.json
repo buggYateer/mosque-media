@@ -13,7 +13,9 @@
     "typecheck": "tsc --noEmit",
     "data:sync": "tsx scripts/data-sync.ts",
     "data:export": "tsx scripts/data-sync.ts --export",
-    "test:storage": "tsx scripts/test-storage.ts"
+    "test:storage": "tsx scripts/test-storage.ts",
+    "test:e2e": "playwright test",
+    "test": "pnpm test:storage && pnpm build && playwright test"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
@@ -35,6 +37,7 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.6.0",
+    "@playwright/test": "^1.65.1",
     "@tailwindcss/turbopack": "4.3.3",
     "@types/node": "^20",
     "@types/react": "^19",

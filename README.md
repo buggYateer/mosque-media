@@ -43,8 +43,11 @@ The assistant follows [AGENTS.md](AGENTS.md). It checks your tools, asks about y
 - **Built-in player.** Remembers where you stopped, offers playback speed, plays the next lesson automatically, and works from the lock screen. Downloads save with the Arabic lesson title.
 - **Automatic collections.** For example, every clip that mentions «رمضان» is grouped into *Ramadan Nights*.
 - **Admin dashboard (`/lawha`), password-protected.** Rename, re-assign, hide or add clips and pick featured lessons from your phone.
-- **Installable app (PWA)** with a dark mode, Arabic RTL layout, and a fast mobile-first design.
+- **Installable app (PWA)** with dark mode, offline support and a fast mobile-first design.
+- **Many languages.** Arabic, English, Urdu, Hindi and Russian built in (right-to-left and left-to-right); adding another language is one translation file.
+- **Your choice of storage.** JSON files in the repo (free, default), or PostgreSQL / Supabase / Neon / SQLite / Turso. Audio on GitHub Releases (free, default) or any S3-compatible bucket such as Cloudflare R2.
 - **Your own identity.** Your logo, colors, font, corner style and header style are set with a short questionnaire.
+- **Fast.** Every page is prerendered at build time; each recording has its own shareable page with a proper title and preview image.
 
 <p align="center">
   <img src="docs/screenshots/sheikh-desktop.png" alt="Sheikh page with series" width="80%">
@@ -70,13 +73,13 @@ It asks for the mosque name, channel, colors, font, corners, header style and sh
 ## How it works
 
 ```
-Telegram channel ──export / bot──▶ data/messages.json + data/audio/
+Telegram channel ──export / bot──▶ data/messages.json + data/audio/        (Python tools)
                                         │
                         tools/build_data.py
                                         ▼
-                               web/lessons.json ──git push──▶ Vercel (website)
-data/audio/*.mp3 ──tools/update_site.py──▶ GitHub Releases (audio files)
-Dashboard edits ──▶ web/overrides.json (saved to GitHub by the /lawha page)
+                          content/lessons.json ──git push──▶ Vercel builds the Next.js site
+data/audio/*.mp3 ──tools/update_site.py──▶ GitHub Releases or S3/R2 (audio)
+Dashboard (/lawha) ──▶ content/overrides.json in GitHub  (or the database, if you chose one)
 ```
 
 - **Titles** come from the first line of each post's caption (the text after `|` if present).
@@ -92,11 +95,12 @@ Dashboard edits ──▶ web/overrides.json (saved to GitHub by the /lawha page
 - A **public** Telegram channel (with a username)
 - Free [GitHub](https://github.com/signup) and [Vercel](https://vercel.com/signup) accounts
 - [Python 3.10+](https://www.python.org/downloads/), [Git](https://git-scm.com/downloads), [GitHub CLI](https://cli.github.com), [Telegram Desktop](https://desktop.telegram.org)
-- Optional: `pip install pillow` (for app icons) and ffmpeg (to convert non-MP3 audio)
+- [Node.js 22+](https://nodejs.org) and pnpm (`npm install -g pnpm`)
+- Optional: ffmpeg (to convert non-MP3 audio)
 </details>
 
-1. **Preview the demo.** Run `python tools/serve.py`, then open http://localhost:8780.
-2. **Configure.** Run `python tools/setup.py` (or edit `site.config.json` directly) and add your logo to `assets/`.
+1. **Preview the demo.** Run `pnpm install`, then `pnpm dev`, and open http://localhost:3000.
+2. **Configure.** Run `python tools/setup.py` (or edit `site.config.json` directly) and add your logo to `assets/`. The site reloads with your colors, font and languages.
 3. **Import your channel.** In Telegram Desktop, open the channel → ⋮ → *Export chat history* → Audio files, JSON. Then run:
    ```bash
    python tools/import_telegram_export.py "path/to/ChatExport_folder"
@@ -104,12 +108,12 @@ Dashboard edits ──▶ web/overrides.json (saved to GitHub by the /lawha page
 4. **Define series** *(optional)* in `data/series.json`.
 5. **Push to GitHub.** Create a public repo, put its name in `githubRepo`, then run `gh auth login`, `git init`, and push.
 6. **Upload audio and publish.** Run `python tools/update_site.py`.
-7. **Deploy on Vercel.** Import the repo, set *Framework Preset* to **Other**, and deploy.
+7. **Deploy on Vercel.** Import the repo; Vercel detects **Next.js** automatically. Deploy.
 8. **Enable the dashboard.** In Vercel → Settings → Environment Variables, add:
    - `ADMIN_PASSWORD`: your dashboard password
    - `GITHUB_TOKEN`: a fine-grained token scoped to this repo with *Contents: Read and write*
 
-   Then redeploy.
+   To upload audio from the dashboard, also connect a Blob store (Vercel → Storage → Create → Blob → Connect). It adds `BLOB_READ_WRITE_TOKEN` by itself. Then redeploy.
 
 **Weekly update:** export only the new posts from Telegram, then run:
 
@@ -119,23 +123,64 @@ python tools/update_site.py --export "path/to/new/export"
 
 A detailed, beginner-friendly guide in Arabic is in **[docs/guide-ar.md](docs/guide-ar.md)**.
 
+## Languages
+
+Set them in `site.config.json`:
+
+```json
+"i18n": { "default": "ar", "locales": ["ar", "en", "ur"] }
+```
+
+The default language has no URL prefix; others live under `/en/…`, `/ur/…`. Interface text is in `messages/<language>.json`, so adding a language means adding one file and listing it in `lib/config.ts`. Urdu, Hindi and Russian were machine-translated and are marked **beta** until a native speaker reviews them. Corrections are very welcome.
+
+## Storage options
+
+Pick them in `site.config.json` → `storage`. Connection secrets go **only** in environment variables.
+
+| Data (`storage.data.provider`) | Needs |
+|---|---|
+| `github-json` *(default)* | Nothing. Files in `content/`, every change is a git commit |
+| `postgres` | `DATABASE_URL` (PostgreSQL, Supabase, Neon, Vercel Postgres) |
+| `sqlite` | `DATABASE_URL` (`libsql://…` for Turso, or `file:…`) and `DATABASE_AUTH_TOKEN` for Turso |
+
+| Audio (`storage.audio`) | Needs |
+|---|---|
+| `{ "provider": "github-releases" }` *(default)* | Nothing |
+| `{ "provider": "s3", "publicBase": "https://audio.example.com" }` | Upload keys `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` on your computer and as GitHub secrets |
+
+With a database, run `pnpm data:sync` once (the weekly update does it automatically), and dashboard edits appear on the site within seconds without a redeploy. `pnpm data:export` copies everything back to `content/`.
+
 ## Project structure
 
 | Path | Purpose |
 |---|---|
-| `site.config.json` | Everything about your mosque: name, channel, repo, colors, design, sheikhs |
+| `site.config.json` | Everything about your mosque: name, channel, colors, design, languages, storage, sheikhs |
 | `assets/` | Your logo (`logo.png` / `logo.svg`) |
+| `app/` | Next.js pages (`[locale]/(site)/…`), the dashboard (`[locale]/lawha`), APIs (`api/…`), icons, manifest |
+| `components/` | UI components (`ui/` = shadcn/ui) |
+| `lib/` | Config validation, theme, data helpers, `storage/` providers |
+| `messages/` | Interface translations, one file per language |
+| `content/` | `lessons.json` (built by Python) and `overrides.json` (dashboard edits) |
 | `data/` | Imported posts, series, upload log. Local audio in `data/audio/` is git-ignored |
-| `web/` | The static site served by Vercel (`app.js`, `style.css`, dashboard in `lawha/`) |
-| `api/` | Vercel Edge functions: `dl` (named downloads), `admin` (dashboard login), `channel` (new posts) |
-| `tools/` | `setup`, `serve`, `import_telegram_export`, `fetch_bot`, `build_data`, `apply_config`, `update_site` |
-| `tools/templates/` | Page templates filled in from `site.config.json` |
+| `tools/` | Python: `setup`, `import_telegram_export`, `fetch_bot`, `fetch_views`, `build_data`, `update_site` |
+| `tests/`, `scripts/` | Playwright tests, storage contract tests, data sync |
 
-Generated files (`web/index.html`, `site.js`, `theme.css`, icons, `api/_site.js`) are rebuilt by `tools/apply_config.py`. Don't edit them by hand.
+## Development
+
+```bash
+pnpm dev            # local site at http://localhost:3000 (demo audio plays a short tone)
+pnpm build          # production build (prerenders every page)
+pnpm test           # storage tests + build + Playwright end-to-end tests
+pnpm lint && pnpm typecheck
+```
+
+See [docs/plan-nextjs.md](docs/plan-nextjs.md) for the architecture and the parity checklist with the original site.
 
 ## Security
 
-- Secrets never live in the repo. The dashboard password and GitHub token are Vercel environment variables, and the Telegram bot token goes in the git-ignored `data/bot_token.txt`.
+- Secrets never live in the repo. The dashboard password, GitHub token, database URL and storage keys are environment variables; the Telegram bot token goes in the git-ignored `data/bot_token.txt`. See `.env.example`.
+- Signing in to the dashboard sets a signed, HttpOnly cookie. **The GitHub token never reaches the browser**; edits are saved through the site's own API.
+- Audio uploads from the dashboard go straight from the browser to Vercel Blob with a short-lived permission, then a GitHub Action moves them to the audio store.
 - The GitHub token should be **fine-grained and limited to this one repository**.
 
 ## License

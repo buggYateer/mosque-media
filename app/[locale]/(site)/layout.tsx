@@ -1,4 +1,4 @@
-import { PlayerBar } from "@/components/player/player-bar";
+import { PlayerBarLazy } from "@/components/player/player-bar-lazy";
 import { PlayerProvider } from "@/components/player/player-provider";
 import { SiteHeader } from "@/components/site-header";
 import { config } from "@/lib/config";
@@ -15,7 +15,7 @@ export default async function SiteLayout({ children }: LayoutProps<"/[locale]">)
         <SiteHeader />
         {children}
       </div>
-      <PlayerBar />
+      <PlayerBarLazy />
     </PlayerProvider>
   );
 }

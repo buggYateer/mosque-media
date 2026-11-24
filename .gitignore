@@ -52,3 +52,7 @@ next-env.d.ts
 # generated from site.config.json
 /lib/generated/
 /public/brand/
+
+# test output
+/test-results/
+/playwright-report/

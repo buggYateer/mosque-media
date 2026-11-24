@@ -8,7 +8,7 @@ import { fmtTime } from "@/lib/text";
 import { cn } from "@/lib/utils";
 import { Cover, KIND_ICON, toneBg } from "../cover";
 import { ShareButton } from "../share-button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
+import { MiniMenu } from "../mini-menu";
 import { SPEEDS, usePlayer } from "./player-provider";
 import { VolumeControl } from "./volume-control";
 
@@ -42,20 +42,15 @@ export function PlayerBar() {
   const ex = p.expanded;
 
   const speed = (
-    <DropdownMenu>
-      <DropdownMenuTrigger aria-label={t("player.speed")} className="h-9 rounded-full px-3 text-sm font-bold tabular-nums hover:bg-muted">
-        {p.speed}×
-      </DropdownMenuTrigger>
-      <DropdownMenuContent side="top" className="min-w-24">
-        <DropdownMenuRadioGroup value={String(p.speed)} onValueChange={(v) => p.setSpeed(Number(v))}>
-          {SPEEDS.map((s) => (
-            <DropdownMenuRadioItem key={s} value={String(s)} className="justify-center tabular-nums">
-              {s}×
-            </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <MiniMenu
+      label={t("player.speed")}
+      side="top"
+      align="center"
+      className="min-w-24"
+      triggerClass="h-9 rounded-full px-3 text-sm font-bold tabular-nums hover:bg-muted"
+      trigger={<>{p.speed}×</>}
+      items={SPEEDS.map((s) => ({ key: String(s), checked: s === p.speed, label: <span className="tabular-nums">{s}×</span>, onSelect: () => p.setSpeed(s) }))}
+    />
   );
 
   const side = (

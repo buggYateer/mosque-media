@@ -1,15 +1,17 @@
 import type { Metadata, Viewport } from "next";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
+import { getMessages } from "next-intl/server";
 import { locale as rootLocale } from "next/root-params";
 import { notFound } from "next/navigation";
 import { ServiceWorker } from "@/components/sw-register";
 import { ThemeProvider } from "@/components/theme-provider";
-import { Toaster } from "@/components/ui/sonner";
 import { routing } from "@/i18n/routing";
 import { config, RTL_LOCALES, type Locale } from "@/lib/config";
 import { scriptFonts, siteFont } from "@/lib/generated/font";
 import { themeCss } from "@/lib/theme";
 import "../globals.css";
+
+const CLIENT_NAMESPACES = ["nav", "kind", "kinds", "common", "filters", "player", "pwa", "collection", "pages"];
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
@@ -37,6 +39,9 @@ export default async function RootLayout({ children }: LayoutProps<"/[locale]">)
   const locale = await rootLocale();
   if (!hasLocale(routing.locales, locale)) notFound();
   const dir = RTL_LOCALES.includes(locale as Locale) ? "rtl" : "ltr";
+  // Only the text that browser-side components use (the dashboard adds its own on /lawha).
+  const all = await getMessages();
+  const messages = Object.fromEntries(CLIENT_NAMESPACES.filter((k) => k in all).map((k) => [k, all[k]]));
   return (
     <html lang={locale} dir={dir} className={[siteFont.variable, scriptFonts[locale]?.variable].filter(Boolean).join(" ")} suppressHydrationWarning>
       <head>
@@ -44,9 +49,8 @@ export default async function RootLayout({ children }: LayoutProps<"/[locale]">)
       </head>
       <body className="min-h-dvh antialiased">
         <ThemeProvider>
-          <NextIntlClientProvider>
+          <NextIntlClientProvider messages={messages}>
             {children}
-            <Toaster position="bottom-center" />
             <ServiceWorker />
           </NextIntlClientProvider>
         </ThemeProvider>
