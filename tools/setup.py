@@ -16,7 +16,7 @@ for _s in (sys.stdout, sys.stderr):  # علشان العربي يظهر صح ف�
 SITE = Path(__file__).resolve().parent.parent
 CFG = SITE / "site.config.json"
 sys.path.insert(0, str(SITE / "tools"))
-from apply_config import CORNERS, FONTS, RESERVED_COLORS, too_close  # noqa: E402
+from apply_config import CORNERS, FONTS, LOCALES, RESERVED_COLORS, too_close  # noqa: E402
 
 PALETTES = [
     ("زيتوني ودهبي فاتح", "#4d7c0f", "#eab308", "#f8f8f2", ["#4d7c0f", "#0e7490", "#9a3412", "#6d28d9"]),
@@ -90,6 +90,14 @@ def main():
     h = choose("الشريط اللي فوق:", ["فاتح (أبيض)", "بلون المسجد"], 2 if od.get("header") == "colored" else 1)
     cfg["design"] = {"font": fonts[f], "corners": list(CORNERS)[c], "header": ["light", "colored"][h]}
 
+    print("\n———— اللغات ————")
+    names = {"ar": "العربية", "en": "English", "ur": "اردو", "hi": "हिन्दी", "ru": "Русский"}
+    oi = old.get("i18n", {})
+    d = choose("لغة الموقع الأساسية:", [names[x] for x in LOCALES], LOCALES.index(oi.get("default", "ar")) + 1)
+    extra = ask("لغات زيادة (اكتب الحروف مفصولة بمسافة: en ur hi ru) — أو Enter لو لغة واحدة بس", " ".join(x for x in oi.get("locales", []) if x != oi.get("default")))
+    locs = [LOCALES[d]] + [x for x in extra.split() if x in LOCALES and x != LOCALES[d]]
+    cfg["i18n"] = {"default": LOCALES[d], "locales": locs}
+
     print("\n———— المشايخ ————")
     if old.get("sheikhs") and input("\nتحب تكتب المشايخ من الأول؟ (ن/ل) [ل]\n> ").strip() not in ("ن", "نعم", "y", "yes"):
         pass
@@ -118,12 +126,13 @@ def main():
     cfg.setdefault("collections", [{"key": "ramadan", "title": "ليالي رمضان", "label": "التراويح والتهجد", "icon": "bedtime", "match": "رمضان"}])
     cfg.setdefault("ignore", [])
 
-    order = ["name", "shortName", "description", "domain", "telegramChannel", "githubRepo", "audioBase", "colors", "design", "sheikhs", "kinds", "collections", "ignore"]
+    cfg.setdefault("storage", {"data": {"provider": "github-json"}, "audio": {"provider": "github-releases"}})
+    order = ["name", "shortName", "description", "domain", "telegramChannel", "githubRepo", "audioBase", "colors", "design", "i18n", "storage", "sheikhs", "kinds", "sheikhPrefixes", "collections", "ignore"]
     cfg = {k: cfg[k] for k in order if k in cfg} | {k: v for k, v in cfg.items() if k not in order}
     CFG.write_text(json.dumps(cfg, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print("\n✓ اتحفظ في site.config.json")
     subprocess.run([sys.executable, str(SITE / "tools" / "apply_config.py")])
-    print("\nالخطوة الجاية: حط لوجو مسجدك في assets/logo.png (أو logo.svg)، وبعدها شغّل:  python tools/serve.py")
+    print("\nالخطوة الجاية: حط لوجو مسجدك في assets/logo.png (أو logo.svg)، وبعدها شغّل:  pnpm dev  وافتح http://localhost:3000")
 
 
 if __name__ == "__main__":

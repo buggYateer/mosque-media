@@ -61,10 +61,14 @@ const configSchema = z
       .object({ default: z.enum(LOCALES), locales: z.array(z.enum(LOCALES)).min(1) })
       .default({ default: "ar", locales: ["ar"] })
       .refine((i) => i.locales.includes(i.default), { message: "i18n.default must be one of i18n.locales" }),
+    /** Where data and audio live. Secrets (DATABASE_URL, keys) go in environment variables, never here. */
     storage: z
       .object({
-        data: z.object({ provider: z.enum(["github-json"]) }),
-        audio: z.object({ provider: z.enum(["github-releases"]) }),
+        data: z.object({ provider: z.enum(["github-json", "postgres", "sqlite"]) }),
+        audio: z.discriminatedUnion("provider", [
+          z.object({ provider: z.literal("github-releases") }),
+          z.object({ provider: z.literal("s3"), publicBase: z.url() }),
+        ]),
       })
       .default({ data: { provider: "github-json" }, audio: { provider: "github-releases" } }),
     sheikhs: z.array(sheikhSchema),

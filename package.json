@@ -10,10 +10,14 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "data:sync": "tsx scripts/data-sync.ts",
+    "data:export": "tsx scripts/data-sync.ts --export",
+    "test:storage": "tsx scripts/test-storage.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
+    "@libsql/client": "^0.18.0",
     "@vercel/blob": "^2.9.0",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.5.2",
@@ -21,6 +25,7 @@
     "next": "16.4.6",
     "next-intl": "^4.15.3",
     "next-themes": "^0.4.6",
+    "postgres": "^4.1.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "shadcn": "^4.23.0",
@@ -29,6 +34,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.6.0",
     "@tailwindcss/turbopack": "4.3.3",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -36,6 +42,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.4.6",
     "tailwindcss": "4.3.3",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   },
   "packageManager": "pnpm@12.23.0"

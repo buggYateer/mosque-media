@@ -2,7 +2,7 @@
 python tools/make_demo.py
 - بيكتب data/messages.json و data/series.json بمقاطع وهمية (معلّمة demo)
 - أول ما تستورد قناتك الحقيقية (import_telegram_export.py أو fetch_bot.py) البيانات الوهمية دي بتتمسح لوحدها
-- مفيش ملفات صوت حقيقية: المعاينة على الجهاز (serve.py) بتشغّل نغمة قصيرة مكانها"""
+- مفيش ملفات صوت حقيقية: الموقع (pnpm dev) بيشغّل نغمة قصيرة مكانها"""
 import sys
 import json
 from datetime import datetime, timedelta

@@ -7,13 +7,14 @@ import { cacheLife, cacheTag } from "next/cache";
 import { cache as reactCache } from "react";
 import { buildLookup } from "./library";
 import { applyOverrides, type Site } from "./overrides";
-import { dataStore } from "./storage";
+import { getDataStore } from "./storage";
 
 export async function getSite(): Promise<Site> {
   "use cache";
   cacheTag("library");
   cacheLife("max");
-  const [library, overrides] = await Promise.all([dataStore.getLibrary(), dataStore.getOverrides()]);
+  const store = await getDataStore();
+  const [library, overrides] = await Promise.all([store.getLibrary(), store.getOverrides()]);
   return applyOverrides(library, overrides);
 }
 

@@ -1,8 +1,8 @@
-name: Move new audio to Releases
+name: Move new audio to the audio store
 # The dashboard stages new audio in one of two ways:
 #   incoming/<id>.json  → {"url": "<Vercel Blob URL>"}  (v2 dashboard: uploaded from the browser to Vercel Blob)
 #   incoming/<id>.mp3   → the file itself              (v1 dashboard)
-# Here each file is uploaded to the Release audio-<id/500> and removed from the repository.
+# Here each file is uploaded (GitHub Release audio-<id/500>, or the S3 bucket) and removed from the repository.
 on:
   push:
     branches: [main]
@@ -16,11 +16,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Upload files to Releases
+      - name: Upload files to the audio store
         env:
           GH_TOKEN: ${{ github.token }}
+          # Only for storage.audio.provider = "s3" (Cloudflare R2, Backblaze B2, AWS …): add these as repository secrets.
+          AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
+          S3_ENDPOINT: ${{ secrets.S3_ENDPOINT }}
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+          AWS_DEFAULT_REGION: auto
         run: |
           shopt -s nullglob
+          provider=$(jq -r '.storage.audio.provider // "github-releases"' site.config.json)
           moved=0
           mkdir -p /tmp/audio
           for f in incoming/*.json incoming/*.mp3; do
@@ -34,10 +41,14 @@ jobs:
             else
               src="$f"
             fi
-            num=${id%%_*}
-            tag="audio-$((num / 500))"
-            gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --title "Audio $tag" --notes "Audio files of the site"
-            gh release upload "$tag" "$src" --clobber
+            if [ "$provider" = "s3" ]; then
+              aws s3 cp "$src" "s3://$S3_BUCKET/$id.mp3" --endpoint-url "$S3_ENDPOINT" --content-type audio/mpeg
+            else
+              num=${id%%_*}
+              tag="audio-$((num / 500))"
+              gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --title "Audio $tag" --notes "Audio files of the site"
+              gh release upload "$tag" "$src" --clobber
+            fi
             git rm -q "$f"
             moved=$((moved + 1))
           done
