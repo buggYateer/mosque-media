@@ -1,8 +1,9 @@
-import { Menu, Search, Send } from "lucide-react";
+import { Send } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { config } from "@/lib/config";
-import { Button } from "@/components/ui/button";
+import { getCategories, getLookup } from "@/lib/data";
+import { DrawerMenu, SearchBar, type NavGroup } from "./header-client";
 import { LocaleSwitcher } from "./locale-switcher";
 import { Logo } from "./logo";
 import { ThemeToggle } from "./theme-toggle";
@@ -16,14 +17,26 @@ const NAV = [
 ] as const;
 
 export async function SiteHeader() {
-  const t = await getTranslations("nav");
-  const onHeader = "text-header-foreground hover:bg-header-foreground/10 hover:text-header-foreground";
+  const [t, cats, lk] = await Promise.all([getTranslations("nav"), getCategories(), getLookup()]);
+  const groups: NavGroup[] = [
+    { title: t("sections"), items: cats.map((c) => ({ href: c.href, label: c.label ?? t(c.key as "lessons"), icon: c.icon, n: c.n })) },
+    {
+      title: t("browse"),
+      items: [
+        { href: "/", label: t("home"), icon: "home" },
+        { href: "/all", label: t("all"), icon: "library", n: lk.ids.length },
+        { href: "/latest", label: t("latest"), icon: "latest" },
+        { href: "/popular", label: t("popular"), icon: "popular" },
+        { href: "/weekly", label: t("weekly"), icon: "weekly", n: lk.site.sheikhs.filter((s) => s.main).length },
+        { href: "/series", label: t("series"), icon: "lesson", n: lk.site.sheikhs.reduce((a, s) => a + (s.series?.length ?? 0), 0) },
+      ],
+    },
+    { title: t("more"), items: [{ href: "/others", label: t("others"), icon: "others", n: lk.site.sheikhs.filter((s) => !s.main).length }] },
+  ];
   return (
     <header className="sticky top-0 z-20 border-b bg-header text-header-foreground">
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-0.5 px-2 sm:gap-1 sm:px-4">
-        <Button variant="ghost" size="icon-lg" className={onHeader} aria-label={t("menu")}>
-          <Menu className="size-5" />
-        </Button>
+        <DrawerMenu groups={groups} />
         <Link href="/" className="me-auto flex min-w-0 items-center gap-2 text-lg font-extrabold sm:gap-2.5 sm:text-xl">
           <Logo className="shrink-0" />
           <span className="truncate">{config.name}</span>
@@ -37,9 +50,7 @@ export async function SiteHeader() {
         </nav>
         <LocaleSwitcher />
         <ThemeToggle />
-        <Button variant="ghost" size="icon-lg" className={onHeader} aria-label={t("search")}>
-          <Search className="size-5" />
-        </Button>
+        <SearchBar />
         <a
           href={`https://t.me/${config.telegramChannel}`}
           target="_blank"

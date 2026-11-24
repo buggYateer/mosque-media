@@ -1,0 +1,41 @@
+import { AudioLines, BookOpen, BookText, Mic } from "lucide-react";
+import type { Kind } from "@/lib/storage/types";
+import { cn } from "@/lib/utils";
+
+/** Literal class names so Tailwind generates them. */
+export const TONE_BG = ["bg-tone-1", "bg-tone-2", "bg-tone-3", "bg-tone-4", "bg-tone-5", "bg-tone-6"];
+export const toneBg = (tone = 1) => TONE_BG[(tone - 1) % TONE_BG.length];
+
+export const KIND_ICON = { lesson: BookText, khutba: Mic, tilawa: AudioLines, other: BookOpen } as const;
+
+/**
+ * A cover drawn in code (no image files): the sheikh's color, an icon, a small tag and the title.
+ * Deliberately plain — each mosque can restyle it in this one file.
+ */
+export function Cover({
+  tone,
+  kind,
+  tag,
+  title,
+  byline,
+  className,
+}: {
+  tone?: number;
+  kind?: Kind | "series";
+  tag?: string;
+  title: string;
+  byline?: string;
+  className?: string;
+}) {
+  const Icon = kind === "series" ? BookOpen : KIND_ICON[kind ?? "lesson"];
+  return (
+    <div aria-hidden className={cn("@container relative flex aspect-video items-end overflow-hidden p-4 text-white", toneBg(tone), className)}>
+      <Icon className="absolute top-3 end-3 size-8 opacity-55" />
+      <div className="flex max-w-[88%] flex-col leading-snug">
+        {tag ? <small className="text-[12.5px] opacity-80">{tag}</small> : null}
+        <b className="line-clamp-2 text-[clamp(15px,8cqw,22px)] font-extrabold">{title}</b>
+        {byline ? <i className="text-[13px] not-italic opacity-85">{byline}</i> : null}
+      </div>
+    </div>
+  );
+}

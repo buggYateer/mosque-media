@@ -48,4 +48,18 @@ for (const ext of ["svg", "png"]) {
     copyFileSync(src, join(brand, `logo.${ext}`));
   }
 }
-console.log(`✓ prepared: font ${name}${existsSync(brand) ? ", logo from assets/" : ", no logo yet (letter placeholder)"}`);
+// 3) A tiny TTF subset (only the letters of the mosque name; TTF or WOFF) for the generated icons and share image.
+//    Downloaded from Google Fonts at build time; without internet the images just skip the text.
+const ttf = join(root, "lib", "generated", "brand-font.bin");
+try {
+  const text = encodeURIComponent([...new Set(config.name + "مسجد")].join(""));
+  const css = await fetch(`https://fonts.googleapis.com/css2?family=${f.fn.replaceAll("_", "+")}:wght@700&text=${text}`, {
+    headers: { "User-Agent": "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/534.30 (KHTML, like Gecko) Safari/534.30" },
+  }).then((r) => r.text());
+  const url = /src:\s*url\(([^)]+)\)\s*format\('(?:truetype|opentype|woff)'\)/.exec(css)?.[1];
+  if (url) writeFileSync(ttf, Buffer.from(await fetch(url).then((r) => r.arrayBuffer())));
+} catch {
+  /* offline: icons fall back to no text */
+}
+
+console.log(`✓ prepared: font ${name}${existsSync(brand) ? ", logo from assets/" : ", no logo yet (letter placeholder)"}${existsSync(ttf) ? "" : " (icon font not downloaded)"}`);

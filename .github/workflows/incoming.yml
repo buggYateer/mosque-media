@@ -1,5 +1,8 @@
-name: نقل الصوت الجديد للـ Releases
-# الداشبورد بترفع الصوت في incoming/<رقم الرسالة>.mp3 — هنا بيتنقل لـ Release audio-N ويتمسح من المستودع
+name: Move new audio to Releases
+# The dashboard stages new audio in one of two ways:
+#   incoming/<id>.json  → {"url": "<Vercel Blob URL>"}  (v2 dashboard: uploaded from the browser to Vercel Blob)
+#   incoming/<id>.mp3   → the file itself              (v1 dashboard)
+# Here each file is uploaded to the Release audio-<id/500> and removed from the repository.
 on:
   push:
     branches: [main]
@@ -13,25 +16,34 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: رفع الملفات على Releases
+      - name: Upload files to Releases
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           shopt -s nullglob
           moved=0
-          for f in incoming/*.mp3; do
-            id=$(basename "$f" .mp3)
-            case "$id" in (*[!0-9_]*|'') echo "اسم غلط: $f"; continue;; esac
+          mkdir -p /tmp/audio
+          for f in incoming/*.json incoming/*.mp3; do
+            id=$(basename "$f"); id=${id%.*}
+            case "$id" in (*[!0-9_]*|'') echo "Bad name: $f"; continue;; esac
+            if [ "${f##*.}" = "json" ]; then
+              url=$(jq -r .url "$f")
+              case "$url" in (https://*.public.blob.vercel-storage.com/*) ;; (*) echo "Bad URL in $f"; continue;; esac
+              curl -fsSL "$url" -o "/tmp/audio/$id.mp3" || { echo "Download failed: $f"; continue; }
+              src="/tmp/audio/$id.mp3"
+            else
+              src="$f"
+            fi
             num=${id%%_*}
             tag="audio-$((num / 500))"
-            gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --title "صوتيات $tag" --notes "ملفات صوت الموقع"
-            gh release upload "$tag" "$f" --clobber
+            gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --title "Audio $tag" --notes "Audio files of the site"
+            gh release upload "$tag" "$src" --clobber
             git rm -q "$f"
             moved=$((moved + 1))
           done
           if [ "$moved" -gt 0 ]; then
             git config user.name "github-actions"
             git config user.email "github-actions@users.noreply.github.com"
-            git commit -qm "نقل $moved ملف صوت للـ Releases"
+            git commit -qm "Move $moved audio file(s) to Releases"
             git push
           fi

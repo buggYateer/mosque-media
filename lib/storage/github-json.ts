@@ -6,7 +6,10 @@
  */
 import lessonsJson from "@/content/lessons.json";
 import overridesJson from "@/content/overrides.json";
+import { commitFiles, readRepoFile } from "@/lib/admin/github";
 import { librarySchema, overridesSchema, type DataStore, type Library, type Overrides } from "./types";
+
+const FILE = "content/overrides.json";
 
 function parseOrExplain<T>(what: string, schema: { safeParse: (v: unknown) => { success: true; data: T } | { success: false; error: { issues: { path: PropertyKey[]; message: string }[] } } }, value: unknown): T {
   const r = schema.safeParse(value);
@@ -22,7 +25,19 @@ export const githubJson: DataStore = {
   async getLibrary(): Promise<Library> {
     return parseOrExplain("content/lessons.json", librarySchema, lessonsJson);
   },
-  async getOverrides(): Promise<Overrides> {
-    return parseOrExplain("content/overrides.json", overridesSchema, overridesJson);
+  async getOverrides(opts): Promise<Overrides> {
+    if (opts?.fresh) {
+      try {
+        const latest = await readRepoFile(FILE);
+        if (latest !== null) return parseOrExplain(FILE, overridesSchema, JSON.parse(latest));
+      } catch (e) {
+        // Local previews may have no real GitHub access; production must never fall back to an old copy.
+        if (process.env.NODE_ENV !== "development") throw e;
+      }
+    }
+    return parseOrExplain(FILE, overridesSchema, overridesJson);
+  },
+  async saveOverrides(overrides, message, extraFiles = []) {
+    await commitFiles([{ path: FILE, content: JSON.stringify(overrides, null, 1) + "\n" }, ...extraFiles], message);
   },
 };

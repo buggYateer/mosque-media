@@ -68,6 +68,8 @@ export const overridesSchema = z.object({
         hidden: z.boolean().optional(),
         series: z.string().optional(),
         sec: z.string().optional(),
+        d: z.string().optional(),
+        p: z.number().int().optional(), // audio uploaded from the dashboard
       }),
     )
     .default({}),
@@ -81,9 +83,10 @@ export interface DataStore {
   /** Human-readable provider name, shown in the dashboard. */
   readonly name: string;
   getLibrary(): Promise<Library>;
-  getOverrides(): Promise<Overrides>;
-  /** Phase 3 (dashboard): persist dashboard edits. */
-  saveOverrides?(overrides: Overrides, message: string): Promise<void>;
+  /** `fresh`: read the latest saved version (the dashboard), not the copy bundled with this deployment. */
+  getOverrides(opts?: { fresh?: boolean }): Promise<Overrides>;
+  /** Persist dashboard edits. `extraFiles` lets git-based stores commit audio pointers in the same commit. */
+  saveOverrides(overrides: Overrides, message: string, extraFiles?: { path: string; content: string }[]): Promise<void>;
 }
 
 export interface AudioStore {
