@@ -4,6 +4,8 @@ A free, self-hosted website for your mosque's **lessons, Friday sermons and Qura
 
 Visitors browse by sheikh → series → lesson and listen right on the site, with no Telegram needed. It costs nothing to run: the site is hosted on **Vercel** and the audio is stored in **GitHub Releases**.
 
+🌍 **Available in 5 languages:** العربية · English · اردو · हिन्दी · Русский. Pick one or several in `site.config.json` and visitors switch between them from the top bar, with right-to-left and left-to-right layouts handled automatically. ([details](#languages))
+
 <p align="center">
   <img src="docs/screenshots/home-desktop.png" alt="Home page" width="64%">
   <img src="docs/screenshots/player-mobile.png" alt="Full-screen player on mobile" width="22%">
@@ -44,7 +46,7 @@ The assistant follows [AGENTS.md](AGENTS.md). It checks your tools, asks about y
 - **Automatic collections.** For example, every clip that mentions «رمضان» is grouped into *Ramadan Nights*.
 - **Admin dashboard (`/lawha`), password-protected.** Rename, re-assign, hide or add clips and pick featured lessons from your phone.
 - **Installable app (PWA)** with dark mode, offline support and a fast mobile-first design.
-- **Many languages.** Arabic, English, Urdu, Hindi and Russian built in (right-to-left and left-to-right); adding another language is one translation file.
+- **5 languages built in.** Arabic, English, Urdu, Hindi and Russian, each with its own address (`/en`, `/ur`…) and a language switch in the top bar. Adding another language is one translation file.
 - **Your choice of storage.** JSON files in the repo (free, default), or PostgreSQL / Supabase / Neon / SQLite / Turso. Audio on GitHub Releases (free, default) or any S3-compatible bucket such as Cloudflare R2.
 - **Your own identity.** Your logo, colors, font, corner style and header style are set with a short questionnaire.
 - **Fast.** Every page is prerendered at build time; each recording has its own shareable page with a proper title and preview image.
@@ -125,7 +127,15 @@ A detailed, beginner-friendly guide in Arabic is in **[docs/guide-ar.md](docs/gu
 
 ## Languages
 
-Set them in `site.config.json`:
+| Language | Direction | Address | Status |
+|---|---|---|---|
+| العربية (Arabic) | right-to-left | `/` (default) | ✅ |
+| English | left-to-right | `/en` | ✅ |
+| اردو (Urdu) | right-to-left | `/ur` | beta |
+| हिन्दी (Hindi) | left-to-right | `/hi` | beta |
+| Русский (Russian) | left-to-right | `/ru` | beta |
+
+Choose any of them, and which one is the default, in `site.config.json`:
 
 ```json
 "i18n": { "default": "ar", "locales": ["ar", "en", "ur"] }
@@ -182,6 +192,10 @@ See [docs/plan-nextjs.md](docs/plan-nextjs.md) for the architecture and the pari
 - Signing in to the dashboard sets a signed, HttpOnly cookie. **The GitHub token never reaches the browser**; edits are saved through the site's own API.
 - Audio uploads from the dashboard go straight from the browser to Vercel Blob with a short-lived permission, then a GitHub Action moves them to the audio store.
 - The GitHub token should be **fine-grained and limited to this one repository**.
+
+## Older version
+
+The first version of this project (a plain HTML/JS site without Next.js) is kept on the [`v1`](https://github.com/buggYateer/mosque-media/tree/v1) branch.
 
 ## License
 
