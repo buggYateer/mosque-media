@@ -47,16 +47,23 @@ export function PlayerBar() {
       side="top"
       align="center"
       className="min-w-24"
-      triggerClass="h-9 rounded-full px-3 text-sm font-bold tabular-nums hover:bg-muted"
+      triggerClass="h-8 rounded-full border px-2.5 text-[13px] font-bold tabular-nums hover:bg-muted"
       trigger={<>{p.speed}×</>}
       items={SPEEDS.map((s) => ({ key: String(s), checked: s === p.speed, label: <span className="tabular-nums">{s}×</span>, onSelect: () => p.setSpeed(s) }))}
     />
   );
 
-  const side = (
-    <div className="flex items-center gap-0.5">
-      <VolumeControl />
+  /** Speed + volume: next to the play controls. */
+  const knobs = (
+    <div className="flex items-center gap-3">
+      <VolumeControl size={ex ? "md" : "lg"} />
       {speed}
+    </div>
+  );
+
+  /** Share, download, Telegram, close: at the side. */
+  const acts = (
+    <div className="flex items-center gap-0.5">
       <ShareButton path={`/l/${L.id}`} title={L.t} variant="icon" className={cn(!ex && "max-md:hidden")} />
       <a href={p.downloadUrl(L.id)} className={cn(iconBtn, !ex && "max-md:hidden")} aria-label={t("common.download")} title={t("common.download")}>
         <Download className="size-5" />
@@ -153,7 +160,10 @@ export function PlayerBar() {
             </h2>
             <p className="mt-1 text-sm">{sub}</p>
           </div>
-          <div className="flex justify-center">{side}</div>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            {knobs}
+            {acts}
+          </div>
           {seek}
           {controls}
         </div>
@@ -162,7 +172,8 @@ export function PlayerBar() {
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-30 border-t bg-card/95 shadow-[0_-4px_20px_rgb(0_0_0/0.08)] backdrop-blur">
-      <div className="mx-auto grid max-w-6xl gap-2 px-3 py-2.5 md:grid-cols-[minmax(0,1fr)_minmax(360px,520px)_minmax(0,1fr)] md:items-center md:gap-4 md:px-4">
+      {/* Desktop: info · knobs · controls+seek · actions — knobs and actions line up with the controls row (48px). */}
+      <div className="mx-auto grid max-w-6xl gap-2 px-3 py-2.5 md:grid-cols-[minmax(0,1fr)_auto_minmax(340px,520px)_minmax(0,1fr)] md:items-center md:gap-4 md:px-4">
         <div className="flex min-w-0 items-center gap-1">
         <button className="flex min-w-0 flex-1 items-center gap-3 text-start" onClick={() => p.setExpanded(true)} aria-label={t("player.expand")}>
           <span className={cn("grid size-11 shrink-0 place-items-center rounded-md text-white", toneBg(L.sh?.tone))}>
@@ -176,18 +187,17 @@ export function PlayerBar() {
             <span className="block truncate text-[13px] text-muted-foreground">{p.error ? t("player.unavailable") : L.sh ? `${t("common.sheikh")} ${L.sh.name}` : p.siteName}</span>
           </span>
         </button>
-          <a href={p.telegramUrl(L.id)} target="_blank" rel="noopener" className={cn(iconBtn, "md:hidden")} aria-label={t("player.openTelegram")}>
-            <Send className="size-5 rtl:-scale-x-100" />
-          </a>
+          <div className="md:hidden">{knobs}</div>
           <button className={cn(iconBtn, "md:hidden")} onClick={p.close} aria-label={t("player.close")}>
             <X className="size-5" />
           </button>
         </div>
-        <div className="flex flex-col-reverse gap-1 md:flex-col">
+        <div className="hidden h-12 self-start md:flex">{knobs}</div>
+        <div className="flex flex-col-reverse gap-1 md:flex-col md:gap-2">
           {controls}
           {seek}
         </div>
-        <div className="hidden justify-end md:flex">{side}</div>
+        <div className="hidden h-12 self-start justify-end md:flex">{acts}</div>
       </div>
     </div>
   );

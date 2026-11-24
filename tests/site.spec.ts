@@ -133,3 +133,27 @@ test("accessibility basics: every button and link has a name", async ({ page }) 
     expect(unnamed, r).toEqual([]);
   }
 });
+
+test("Telegram links open a small menu instead of leaving the site", async ({ page }) => {
+  await page.goto("/l/54");
+  await page.getByRole("link", { name: /^تليجرام$/ }).click();
+  const menu = page.locator("[data-tg-menu]");
+  await expect(menu).toBeVisible();
+  await expect(menu.getByText("المقطع على قناة التليجرام")).toBeVisible();
+  await expect(menu.getByRole("menuitem", { name: "افتح في تليجرام" })).toHaveAttribute("href", /t\.me\/your_channel\/54$/);
+  await expect(page).toHaveURL(/\/l\/54$/);
+  await page.keyboard.press("Escape");
+  await expect(menu).toBeHidden();
+});
+
+test("volume: clicking the icon mutes on desktop, hovering shows the slider", async ({ page }) => {
+  await page.goto("/l/54");
+  await page.getByRole("button", { name: "استمع" }).click();
+  const vol = page.getByRole("button", { name: "كتم الصوت" }).first();
+  await vol.hover();
+  await expect(page.getByRole("slider", { name: "مستوى الصوت" }).first()).toBeVisible();
+  await vol.click();
+  expect(await page.evaluate(() => document.querySelector("audio")!.volume)).toBe(0);
+  await page.getByRole("button", { name: "رجّع الصوت" }).first().click();
+  expect(await page.evaluate(() => document.querySelector("audio")!.volume)).toBeGreaterThan(0);
+});

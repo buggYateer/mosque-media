@@ -73,7 +73,13 @@
       "Shawwal",
       "Dhu al-Qa'dah",
       "Dhu al-Hijjah"
-    ]
+    ],
+    "tgMenu": {
+      "post": "This recording on the Telegram channel",
+      "channel": "The mosque's Telegram channel",
+      "open": "Open in Telegram",
+      "copy": "Copy Telegram link"
+    }
   },
   "home": {
     "latestLesson": "Latest lesson",
@@ -187,7 +193,9 @@
     "openTelegram": "Open in Telegram",
     "seek": "Seek",
     "unavailable": "This file isn't available on the site — listen on Telegram",
-    "volume": "Volume"
+    "volume": "Volume",
+    "mute": "Mute",
+    "unmute": "Unmute"
   },
   "pwa": {
     "title": "Install the mosque app",

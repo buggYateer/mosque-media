@@ -1,6 +1,7 @@
 import { PlayerBarLazy } from "@/components/player/player-bar-lazy";
 import { PlayerProvider } from "@/components/player/player-provider";
 import { SiteHeader } from "@/components/site-header";
+import { TelegramConfirm } from "@/components/telegram-confirm";
 import { config } from "@/lib/config";
 import { getSite } from "@/lib/data";
 
@@ -16,6 +17,7 @@ export default async function SiteLayout({ children }: LayoutProps<"/[locale]">)
         {children}
       </div>
       <PlayerBarLazy />
+      <TelegramConfirm channel={config.telegramChannel} />
     </PlayerProvider>
   );
 }
