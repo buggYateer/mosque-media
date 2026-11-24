@@ -73,3 +73,39 @@
     @apply font-sans;
   }
 }
+
+/* Side menu: slides in from its edge and out again (unlayered, so it wins over the Sheet's own utilities). */
+.mm-drawer {
+  opacity: 1;
+  transition-property: translate;
+  transition-duration: 0.34s;
+  transition-timing-function: cubic-bezier(0.22, 0.8, 0.28, 1);
+}
+.mm-drawer[data-starting-style],
+.mm-drawer[data-ending-style] {
+  opacity: 1;
+}
+.mm-drawer[data-side="right"][data-starting-style],
+.mm-drawer[data-side="right"][data-ending-style] {
+  translate: 100% 0;
+}
+.mm-drawer[data-side="left"][data-starting-style],
+.mm-drawer[data-side="left"][data-ending-style] {
+  translate: -100% 0;
+}
+.mm-drawer[data-ending-style] {
+  transition-duration: 0.26s;
+  transition-timing-function: cubic-bezier(0.5, 0, 0.75, 0.2);
+}
+[data-slot="sheet-overlay"] {
+  transition: opacity 0.3s ease;
+}
+[data-slot="sheet-overlay"][data-ending-style] {
+  transition-duration: 0.26s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .mm-drawer,
+  [data-slot="sheet-overlay"] {
+    transition-duration: 0s !important;
+  }
+}
