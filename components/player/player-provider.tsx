@@ -73,7 +73,11 @@ export function PlayerProvider({ children, audioBase, channel, siteName, logo }:
   const audioUrl = useCallback(
     (id: number, part: number, parts: number) => {
       const file = parts > 1 ? `${id}_${part}.mp3` : `${id}.mp3`;
-      return audioBase.startsWith("/") ? `${audioBase}/${file}` : `${audioBase}/audio-${Math.floor(id / 500)}/${file}`;
+      if (audioBase.startsWith("/")) return `${audioBase}/${file}`;
+      // Safari (every iPhone browser) won't play GitHub's octet-stream files, so it goes through /api/audio
+      if (/iP(hone|ad|od)/.test(navigator.userAgent) || (/Safari\//.test(navigator.userAgent) && !/Chrome|Chromium|Edg|Android|CriOS|FxiOS/.test(navigator.userAgent)) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent)))
+        return `/api/audio/${file}`;
+      return `${audioBase}/audio-${Math.floor(id / 500)}/${file}`;
     },
     [audioBase],
   );
