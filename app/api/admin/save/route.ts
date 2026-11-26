@@ -1,15 +1,25 @@
-import { del, list } from "@vercel/blob";
+import { after } from "next/server";
 import { z } from "zod";
 import { isAdmin } from "@/lib/admin/session";
 import { commitFiles } from "@/lib/admin/github";
+import { AUDIO_EXT, BLOB_URL, cleanupStaged, VIDEO_EXT } from "@/lib/admin/uploads";
 import { revalidateTag } from "next/cache";
 import { getDataStore } from "@/lib/storage";
 import { overridesSchema } from "@/lib/storage/types";
 
 const bodySchema = z.object({
   overrides: overridesSchema,
-  /** Audio files already uploaded to Vercel Blob from the browser, to be moved into the audio store. */
-  uploads: z.array(z.object({ id: z.number().int().positive(), url: z.url() })).default([]),
+  /** Files already uploaded to Vercel Blob from the browser, to be moved into the audio store. */
+  uploads: z
+    .array(
+      z.object({
+        id: z.number().int().positive(),
+        url: z.url(),
+        kind: z.enum(["audio", "video"]).default("audio"),
+        ext: z.string().regex(/^[a-z0-9]{2,4}$/).default("mp3"),
+      }),
+    )
+    .default([]),
 });
 
 /**
@@ -23,11 +33,15 @@ export async function POST(req: Request) {
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return Response.json({ error: "invalid", detail: parsed.error.issues.slice(0, 3) }, { status: 400 });
   const { overrides, uploads } = parsed.data;
-  const blobHost = /^https:\/\/[a-z0-9-]+\.public\.blob\.vercel-storage\.com\//;
-  if (uploads.some((u) => !blobHost.test(u.url))) return Response.json({ error: "invalid-upload-url" }, { status: 400 });
+  if (uploads.some((u) => !BLOB_URL.test(u.url) || !(u.kind === "video" ? VIDEO_EXT : AUDIO_EXT).includes(u.ext)))
+    return Response.json({ error: "invalid-upload-url" }, { status: 400 });
 
-  // Staged audio is moved into the audio store by the GitHub Action (.github/workflows/incoming.yml).
-  const pointers = uploads.map((u) => ({ path: `incoming/${u.id}.json`, content: JSON.stringify({ id: u.id, url: u.url }) + "\n" }));
+  // Staged files are moved into the audio store by the GitHub Action (.github/workflows/incoming.yml):
+  // incoming/<id>.json → <id>.mp3 (converted when needed), incoming/<id>.video.json → <id>.mp4
+  const pointers = uploads.map((u) => ({
+    path: `incoming/${u.id}${u.kind === "video" ? ".video" : ""}.json`,
+    content: JSON.stringify({ id: u.id, url: u.url, kind: u.kind, ext: u.ext }) + "\n",
+  }));
   try {
     const store = await getDataStore();
     if (store.name === "github-json") {
@@ -43,13 +57,7 @@ export async function POST(req: Request) {
     return Response.json({ error: "save-failed", detail: String(e) }, { status: 502 });
   }
 
-  // Best effort: remove staged audio older than 2 days (already moved by GitHub Actions).
-  if (process.env.BLOB_READ_WRITE_TOKEN) {
-    try {
-      const { blobs } = await list({ prefix: "incoming/" });
-      const old = blobs.filter((b) => Date.now() - new Date(b.uploadedAt).getTime() > 2 * 86400_000).map((b) => b.url);
-      if (old.length) await del(old);
-    } catch {}
-  }
+  // after the answer: remove staged files older than 2 days (already moved by the GitHub Action)
+  after(cleanupStaged);
   return Response.json({ ok: true });
 }

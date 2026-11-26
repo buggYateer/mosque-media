@@ -1,4 +1,6 @@
+import { after } from "next/server";
 import { adminConfigured, isAdmin } from "@/lib/admin/session";
+import { cleanupStaged } from "@/lib/admin/uploads";
 import { config } from "@/lib/config";
 import { getDataStore } from "@/lib/storage";
 
@@ -7,6 +9,8 @@ export async function GET() {
   if (!adminConfigured()) return Response.json({ error: "not-configured" }, { status: 503 });
   if (!(await isAdmin())) return Response.json({ error: "signed-out" }, { status: 401 });
   try {
+    // each time the dashboard opens: clear old staged uploads (keeps the free Blob space empty)
+    after(cleanupStaged);
     const store = await getDataStore();
     const [library, overrides] = await Promise.all([store.getLibrary(), store.getOverrides({ fresh: true })]);
     const seriesOf: Record<string, string> = {};
@@ -16,6 +20,7 @@ export async function GET() {
       channel: config.telegramChannel,
       storage: { data: store.name, audio: config.storage.audio.provider },
       uploads: Boolean(process.env.BLOB_READ_WRITE_TOKEN),
+      maxVideoMB: config.media.maxUploadMB,
       lessons: library.lessons,
       sheikhs: library.sheikhs.map((s) => ({ key: s.key, name: s.name, series: (s.series ?? []).map((se) => ({ key: se.key, title: se.title, sections: se.sections.map((x) => x.t) })) })),
       seriesOf,

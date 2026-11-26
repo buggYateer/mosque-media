@@ -45,7 +45,7 @@ The assistant follows [AGENTS.md](AGENTS.md). It checks your tools, asks about y
 - **Browse by sheikh, series and type.** Lessons, Friday sermons, recitations, latest uploads, most listened, and search.
 - **Built-in player.** Remembers where you stopped, offers playback speed, plays the next lesson automatically, and works from the lock screen. Downloads save with the Arabic lesson title.
 - **Automatic collections.** For example, every clip that mentions «رمضان» is grouped into *Ramadan Nights*.
-- **Admin dashboard (`/lawha`), password-protected.** Rename, re-assign, hide or add clips and pick featured lessons from your phone.
+- **Admin dashboard (`/lawha`), password-protected.** Rename, re-assign, hide or add clips and pick featured lessons from your phone. Adding is a three-step wizard: an audio file in any format (converted to mp3 for you), a video link, a video file, or audio and video together; YouTube titles fill in by themselves, and new series can be created on the spot. Files start uploading as soon as they're picked.
 - **Installable app (PWA)** with dark mode, offline support and a fast mobile-first design.
 - **5 languages built in.** Arabic, English, Urdu, Hindi and Russian, each with its own address (`/en`, `/ur`…) and a language switch in the top bar. Adding another language is one translation file.
 - **Your choice of storage.** JSON files in the repo (free, default), or PostgreSQL / Supabase / Neon / SQLite / Turso. Audio on GitHub Releases (free, default) or any S3-compatible bucket such as Cloudflare R2.
@@ -206,7 +206,7 @@ See [docs/plan-nextjs.md](docs/plan-nextjs.md) for the architecture and the pari
 
 - Secrets never live in the repo. The dashboard password, GitHub token, database URL and storage keys are environment variables; the Telegram bot token goes in the git-ignored `data/bot_token.txt`. See `.env.example`.
 - Signing in to the dashboard sets a signed, HttpOnly cookie. **The GitHub token never reaches the browser**; edits are saved through the site's own API.
-- Audio uploads from the dashboard go straight from the browser to Vercel Blob with a short-lived permission, then a GitHub Action moves them to the audio store.
+- Audio and video uploads from the dashboard go straight from the browser to Vercel Blob with a short-lived permission, then a GitHub Action converts them (mp3 / web-ready mp4) and moves them to the audio store. Staged files are deleted after two days.
 - The GitHub token should be **fine-grained and limited to this one repository**.
 
 ## Older version

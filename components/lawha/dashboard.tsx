@@ -4,19 +4,19 @@
  * /lawha — the mosque's dashboard (same features as the original site):
  *  status: new channel posts not on the site, recordings without audio, ignored posts
  *  list:   search / filter / edit (title, sheikh, type, date, series, hidden, featured)
- *  add:    add a recording that's on the channel, with its audio file
+ *  add:    add a recording in three steps: an audio file, a video link or file, or both (components/lawha/add-wizard.tsx)
  *  featured: order the home-page picks
  * Edits stay in this browser until "Publish changes" saves them in one go (server side; no key in the browser).
+ * Picked files start uploading to Vercel Blob at once; publishing waits for them.
  */
 import { upload } from "@vercel/blob/client";
 import { ArrowUp, CirclePlus, CloudUpload, ExternalLink, EyeOff, LayoutDashboard, Library, LogOut, RefreshCw, Search, Send, Star, Trash2, Undo2 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Link } from "@/i18n/navigation";
-import { gregorianToHijri, hijriToGregorian, parseGregorian, parseHijri, toHijriText, toIso, today } from "@/lib/dates";
-import { isAudioLink, parseVideo } from "@/lib/media";
-import { CALENDAR, DEFAULT_TYPE, SITE_ID_START, TYPE_KEYS, TYPES, VIDEO_SOURCES_ON } from "@/lib/site-shared";
+import { AUDIO_EXT, AUDIO_MAX_MB, extOf } from "@/lib/media";
+import { DEFAULT_TYPE, SITE_ID_START, TYPE_KEYS, TYPES } from "@/lib/site-shared";
 import type { Kind, Lesson, Overrides } from "@/lib/storage/types";
 import { norm } from "@/lib/text";
 import { cn } from "@/lib/utils";
@@ -24,39 +24,11 @@ import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Input } from "../ui/input";
 import { Switch } from "../ui/switch";
+import { AddWizard } from "./add-wizard";
+import { Card, control, type Ctx, DateField, Dropzone, type Eff, field, H2, type Job, jobKey, MediaFields, mediaError, Row, type State, type Tab } from "./parts";
 
-type State = {
-  channel: string;
-  storage: { data: string; audio: string };
-  uploads: boolean;
-  lessons: Record<string, Lesson>;
-  sheikhs: { key: string; name: string; series: { key: string; title: string; sections: string[] }[] }[];
-  seriesOf: Record<string, string>;
-  overrides: Overrides;
-};
-type Eff = Lesson & { series: string; hidden: boolean; isNew: boolean; edited: boolean };
 /** The content types from site.config.json. */
 const KINDS: Kind[] = TYPE_KEYS;
-const MAX = 300 * 1024 * 1024;
-
-function fmtDur(sec: number) {
-  const s = Math.round(sec);
-  return s >= 3600 ? `${Math.floor(s / 3600)}:${String(Math.floor((s % 3600) / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}` : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
-}
-const durationOf = (file: File) =>
-  new Promise<string>((res) => {
-    const a = new Audio();
-    a.preload = "metadata";
-    a.onloadedmetadata = () => {
-      res(fmtDur(a.duration));
-      URL.revokeObjectURL(a.src);
-    };
-    a.onerror = () => res("");
-    a.src = URL.createObjectURL(file);
-  });
-
-const field = "flex flex-col gap-1.5 text-sm font-semibold text-muted-foreground";
-const control = "h-10 w-full rounded-lg border bg-background px-3 text-foreground";
 
 export function Dashboard({ logo }: { logo: React.ReactNode }) {
   const t = useTranslations("lawha");
@@ -67,8 +39,14 @@ export function Dashboard({ logo }: { logo: React.ReactNode }) {
   const [data, setData] = useState<State | null>(null);
   const [ov, setOv] = useState<Overrides | null>(null);
   const [orig, setOrig] = useState("");
-  const [files, setFiles] = useState<Record<number, File>>({});
-  const [tab, setTab] = useState<"status" | "list" | "add" | "featured">("status");
+  const [jobs, setJobs] = useState<Record<string, Job>>({});
+  const jobsRef = useRef(jobs);
+  useEffect(() => {
+    jobsRef.current = jobs;
+  });
+  /** uploads still running (publishing waits for them) */
+  const running = useRef<Record<string, Promise<void>>>({});
+  const [tab, setTab] = useState<Tab>("status");
   const [busy, setBusy] = useState("");
 
   const load = useCallback(async () => {
@@ -84,7 +62,7 @@ export function Dashboard({ logo }: { logo: React.ReactNode }) {
     setData(j);
     setOv(j.overrides);
     setOrig(JSON.stringify(j.overrides));
-    setFiles({});
+    setJobs({});
     setPhase("ready");
   }, [t]);
 
@@ -93,7 +71,7 @@ export function Dashboard({ logo }: { logo: React.ReactNode }) {
     load();
   }, [load]);
 
-  const pending = ov ? (JSON.stringify(ov) !== orig ? 1 : 0) + Object.keys(files).length : 0;
+  const pending = ov ? (JSON.stringify(ov) !== orig ? 1 : 0) + Object.keys(jobs).length : 0;
   useEffect(() => {
     const warn = (e: BeforeUnloadEvent) => {
       if (pending) e.preventDefault();
@@ -108,6 +86,7 @@ export function Dashboard({ logo }: { logo: React.ReactNode }) {
       const e = ov!.edit[id] ?? {};
       const L: Eff = { ...base, series: "", hidden: !!e.hidden, isNew: !!ov!.add[id] && !data!.lessons[id], edited: !!ov!.edit[id] };
       for (const f of ["t", "s", "k", "h", "g"] as const) if (e[f]) (L as Record<string, unknown>)[f] = e[f];
+      for (const f of ["vid", "au"] as const) if (e[f] !== undefined) L[f] = e[f] || undefined;
       L.series = e.series !== undefined ? `${e.series}|${e.sec ?? ""}` : ov!.add[id] ? `${ov!.add[id].series ?? ""}|${ov!.add[id].sec ?? ""}` : (data!.seriesOf[id] ?? "");
       if (L.series === "|") L.series = "";
       return L;
@@ -115,27 +94,83 @@ export function Dashboard({ logo }: { logo: React.ReactNode }) {
     [data, ov],
   );
 
+  const patchJob = (key: string, p: Partial<Job>) => setJobs((j) => (j[key] ? { ...j, [key]: { ...j[key], ...p } } : j));
+  /** Sends one file to Vercel Blob (incoming/<id>.<ext> or incoming/<id>.video.<ext>). */
+  const startJob = (job: Job) => {
+    patchJob(job.key, { pct: 0, err: undefined });
+    const task = upload(`incoming/${job.id}${job.kind === "video" ? ".video" : ""}.${job.ext}`, job.file, {
+      access: "public",
+      handleUploadUrl: "/api/admin/upload",
+      contentType: job.file.type || (job.kind === "video" ? "video/mp4" : "audio/mpeg"),
+      multipart: job.file.size > 50 * 1024 * 1024,
+      onUploadProgress: (p) => patchJob(job.key, { pct: Math.round(p.percentage) }),
+    })
+      .then((b) => patchJob(job.key, { url: b.url, pct: 100 }))
+      .catch((e) => patchJob(job.key, { err: String((e as Error).message ?? e) }))
+      .finally(() => delete running.current[job.key]);
+    running.current[job.key] = task;
+  };
+  const addJob = (id: number, kind: Job["kind"], file: File) => {
+    const job: Job = { key: jobKey(id, kind), id, kind, file, ext: extOf(file.name) || (kind === "video" ? "mp4" : "mp3"), pct: 0 };
+    setJobs((j) => ({ ...j, [job.key]: job }));
+    startJob(job);
+  };
+  const retryJob = (key: string) => {
+    const job = jobsRef.current[key];
+    if (job) startJob(job);
+  };
+  /** Drops a file (and deletes what was already uploaded); a new clip that had nothing else is dropped too. */
+  const removeJob = (key: string) => {
+    const job = jobsRef.current[key];
+    if (!job) return;
+    if (job.url) fetch("/api/admin/upload", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: job.url }) }).catch(() => {});
+    setJobs((j) => {
+      const n = { ...j };
+      delete n[key];
+      return n;
+    });
+    setOv((o) => {
+      if (!o) return o;
+      const id = String(job.id);
+      if (o.add[id] && !data?.lessons[id]) {
+        const a = o.add[id];
+        const left = job.kind === "audio" ? !!(a.vid || a.au) : !!(a.p || a.au || (a.vid && a.vid !== "file"));
+        const add = { ...o.add };
+        if (left) add[id] = job.kind === "audio" ? { ...a, p: 0 } : { ...a, vid: undefined };
+        else delete add[id];
+        return { ...o, add };
+      }
+      // an existing clip: undo «has audio» / «has video» that came with the file
+      const e = { ...(o.edit[id] ?? {}) };
+      if (job.kind === "audio") delete e.p;
+      else delete e.vid;
+      const edit = { ...o.edit };
+      if (Object.keys(e).length) edit[id] = e;
+      else delete edit[id];
+      return { ...o, edit };
+    });
+  };
+
   const publish = async () => {
     if (!ov) return;
     try {
-      const uploads: { id: number; url: string }[] = [];
-      for (const [id, file] of Object.entries(files)) {
-        setBusy(t("uploadingFile", { id, pct: 0 }));
-        const b = await upload(`incoming/${id}.mp3`, file, {
-          access: "public",
-          handleUploadUrl: "/api/admin/upload",
-          contentType: "audio/mpeg",
-          multipart: file.size > 50 * 1024 * 1024,
-          onUploadProgress: (p) => setBusy(t("uploadingFile", { id, pct: Math.round(p.percentage) })),
-        });
-        uploads.push({ id: Number(id), url: b.url });
+      // wait for files still uploading
+      if (Object.keys(running.current).length) {
+        setBusy(t("wiz.waitUploads"));
+        await Promise.allSettled(Object.values(running.current));
       }
+      const list = Object.values(jobsRef.current);
+      if (list.some((j) => !j.url)) {
+        toast.error(t("wiz.uploadsFailed"));
+        return;
+      }
+      const uploads = list.map((j) => ({ id: j.id, url: j.url!, kind: j.kind, ext: j.ext }));
       setBusy(t("publishing"));
       const r = await fetch("/api/admin/save", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ overrides: ov, uploads }) });
       if (r.status === 401) return setPhase("login");
       if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail ?? r.status);
       setOrig(JSON.stringify(ov));
-      setFiles({});
+      setJobs({});
       toast.success(t("published"));
     } catch (e) {
       toast.error(t("publishFailed", { detail: String((e as Error).message ?? e) }));
@@ -194,11 +229,15 @@ export function Dashboard({ logo }: { logo: React.ReactNode }) {
 
   const allIds = [...new Set([...Object.keys(data.lessons), ...Object.keys(ov.add)])].map(Number).sort((a, b) => b - a);
   const shName = (k: string) => data.sheikhs.find((s) => s.key === k)?.name ?? "";
-  const seriesOpts = data.sheikhs.flatMap((sh) =>
-    sh.series.flatMap((se) => (se.sections.length > 1 ? se.sections : [""]).map((sec) => [`${se.key}|${sec}`, `${se.title}${sec ? ` — ${sec}` : ""} (${sh.name})`] as const)),
-  );
+  const seriesOpts = [
+    ...data.sheikhs.flatMap((sh) =>
+      sh.series.flatMap((se) => (se.sections.length > 1 ? se.sections : [""]).map((sec) => [`${se.key}|${sec}`, `${se.title}${sec ? ` — ${sec}` : ""} (${sh.name})`] as const)),
+    ),
+    // series made from the dashboard
+    ...ov.series.map((se) => [`${se.key}|`, `${se.title} (${shName(se.sheikh)})`] as const),
+  ];
   const updateOv = (fn: (o: Overrides) => Overrides) => setOv((o) => (o ? fn(o) : o));
-  const ctx = { t, tk, data, ov, setOv: updateOv, files, setFiles, eff, allIds, shName, seriesOpts, locale, setTab };
+  const ctx: Ctx = { t, tk, data, ov, setOv: updateOv, jobs, addJob, removeJob, retryJob, eff, allIds, shName, seriesOpts, locale, setTab };
   const tabs = [
     ["status", LayoutDashboard],
     ["list", Library],
@@ -222,7 +261,7 @@ export function Dashboard({ logo }: { logo: React.ReactNode }) {
       <main className="mx-auto max-w-5xl px-4 py-5">
         {tab === "status" ? <StatusView {...ctx} /> : null}
         {tab === "list" ? <ListView {...ctx} /> : null}
-        {tab === "add" ? <AddView {...ctx} /> : null}
+        {tab === "add" ? <AddWizard {...ctx} /> : null}
         {tab === "featured" ? <FeaturedView {...ctx} /> : null}
         <p className="mt-8 text-center text-xs text-muted-foreground">{t("storage", { data: data.storage.data, audio: data.storage.audio })}</p>
       </main>
@@ -260,41 +299,6 @@ function Login({ onDone }: { onDone: () => void }) {
   );
 }
 
-type Ctx = {
-  t: ReturnType<typeof useTranslations<"lawha">>;
-  tk: ReturnType<typeof useTranslations<"kind">>;
-  data: State;
-  ov: Overrides;
-  setOv: (fn: (o: Overrides) => Overrides) => void;
-  files: Record<number, File>;
-  setFiles: (fn: (f: Record<number, File>) => Record<number, File>) => void;
-  eff: (id: number) => Eff;
-  allIds: number[];
-  shName: (k: string) => string;
-  seriesOpts: (readonly [string, string])[];
-  locale: string;
-  setTab: (t: "status" | "list" | "add" | "featured") => void;
-};
-
-const Row = ({ id, title, sub, children, onClick }: { id: number | string; title: React.ReactNode; sub?: React.ReactNode; children?: React.ReactNode; onClick?: () => void }) => (
-  <div className={cn("flex items-center gap-3 border-b px-3.5 py-2.5 last:border-b-0", onClick && "cursor-pointer hover:bg-muted/60")} onClick={onClick}>
-    <span className="min-w-12 rounded-md bg-muted px-1.5 py-0.5 text-center text-xs font-bold text-muted-foreground tabular-nums">{id}</span>
-    <div className="min-w-0 flex-1">
-      <b className="block truncate font-semibold">{title}</b>
-      {sub ? <small className="block truncate text-muted-foreground">{sub}</small> : null}
-    </div>
-    {children ? <div className="flex shrink-0 items-center gap-1.5">{children}</div> : null}
-  </div>
-);
-const Card = ({ children }: { children: React.ReactNode }) => <div className="overflow-hidden rounded-xl border bg-card">{children}</div>;
-const H2 = ({ children, extra }: { children: React.ReactNode; extra?: React.ReactNode }) => (
-  <div className="mt-7 mb-2 flex items-center gap-2">
-    <h2 className="text-lg font-extrabold">{children}</h2>
-    <span className="flex-1" />
-    {extra}
-  </div>
-);
-
 function StatusView(c: Ctx) {
   const { t, data, ov, setOv, eff, allIds, shName } = c;
   const [chan, setChan] = useState<{ last: number; found: { id: number; date: string }[] } | null>(null);
@@ -316,7 +320,7 @@ function StatusView(c: Ctx) {
 
   const missing = allIds.filter((i) => {
     const L = eff(i);
-    return !L.hidden && !(data.lessons[i] ?? ov.add[i])?.p && !c.files[i];
+    return !L.hidden && !(data.lessons[i] ?? ov.add[i])?.p && !(data.lessons[i] ?? ov.add[i])?.vid && !c.jobs[jobKey(i, "audio")];
   });
   const newOnes = chan ? chan.found.filter((x) => x.id > lastSite && !ov.ignore.includes(x.id) && !ov.add[x.id]) : null;
   const fmtDate = (d: string) => new Date(d).toLocaleString(c.locale, { dateStyle: "medium", timeStyle: "short" });
@@ -418,86 +422,6 @@ function StatusView(c: Ctx) {
   );
 }
 
-/**
- * The date of a recording, in the calendar the mosque chose (site.config.json → dates).
- * Both dates are kept in step, so switching the calendar later still has every date.
- */
-function DateField({ t, h, g, onChange }: { t: Ctx["t"]; h: string; g: string; onChange: (d: { h: string; g: string }) => void }) {
-  if (CALENDAR === "none") return null;
-  const gValue = g || (parseHijri(h) ? toIso(hijriToGregorian(parseHijri(h)!)) : "");
-  const setG = (x: string) => {
-    const p = parseGregorian(x);
-    onChange({ g: x, h: p ? toHijriText(gregorianToHijri(p)) : h });
-  };
-  const setH = (x: string) => {
-    const p = parseHijri(x);
-    onChange({ h: x, g: p ? toIso(hijriToGregorian(p)) : g });
-  };
-  const hijri = (
-    <label className={field}>
-      {t("fieldDate")}
-      <input className={control} value={h} inputMode="numeric" placeholder="7-6-1448" onChange={(e) => setH(e.target.value)} />
-    </label>
-  );
-  const greg = (
-    <label className={field}>
-      {t("fieldDateG")}
-      <input className={control} type="date" value={gValue} onChange={(e) => setG(e.target.value)} />
-    </label>
-  );
-  if (CALENDAR === "gregorian") return greg;
-  if (CALENDAR === "both")
-    return (
-      <>
-        {greg}
-        {hijri}
-      </>
-    );
-  return hijri;
-}
-
-/** What's wrong with a video / audio link, or "" when both are fine (or empty). */
-function mediaError(t: Ctx["t"], vid: string, au: string) {
-  if (vid.trim()) {
-    const v = parseVideo(vid.trim(), "x");
-    if (!v || v.source === "file") return t("badLink");
-    if (!VIDEO_SOURCES_ON.includes(v.source)) return t("sourceOff", { site: t(`sourceName.${v.source}`) });
-  }
-  if (au.trim() && !isAudioLink(au.trim())) return t("badLink");
-  return "";
-}
-
-/** A video link (YouTube / Facebook / Drive / direct) and an outside audio link, with what was recognized. */
-function MediaFields({ t, vid, au, onChange }: { t: Ctx["t"]; vid: string; au: string; onChange: (m: { vid: string; au: string }) => void }) {
-  const v = vid.trim() && vid !== "file" ? parseVideo(vid.trim(), "x") : null;
-  const note = !vid.trim() || vid === "file" ? "" : v && VIDEO_SOURCES_ON.includes(v.source) ? t("videoFound", { site: t(`sourceName.${v.source}`) }) : mediaError(t, vid, "");
-  const ok = !!v && VIDEO_SOURCES_ON.includes(v.source);
-  return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      <label className={field}>
-        {t("fieldVideo")}
-        <input className={control} dir="ltr" inputMode="url" placeholder="https://youtu.be/…" value={vid === "file" ? "" : vid} onChange={(e) => onChange({ vid: e.target.value, au })} />
-        {note ? <small className={cn("font-normal", ok ? "text-primary" : "text-destructive")}>{note}</small> : null}
-      </label>
-      <label className={field}>
-        {t("fieldAudioLink")}
-        <input className={control} dir="ltr" inputMode="url" placeholder="https://…/lesson.mp3" value={au} onChange={(e) => onChange({ vid, au: e.target.value })} />
-      </label>
-    </div>
-  );
-}
-
-function FilePick({ t, file, onPick }: { t: Ctx["t"]; file?: File; onPick: (f: File) => void }) {
-  return (
-    <label className={cn("flex cursor-pointer flex-col items-center gap-1 rounded-xl border-2 border-dashed p-5 text-center hover:bg-muted/50", file && "border-primary bg-accent")}>
-      <CloudUpload className="size-7 text-primary" />
-      <b>{file ? `${file.name} — ${(file.size / 1e6).toFixed(1)} MB` : t("chooseFile")}</b>
-      <small className="text-muted-foreground">{t("fileLimit")}</small>
-      <input type="file" accept="audio/mpeg,.mp3" className="hidden" onChange={(e) => e.target.files?.[0] && onPick(e.target.files[0])} />
-    </label>
-  );
-}
-
 function UploadDialog(c: Ctx & { id: number; onClose: () => void }) {
   const { t, id, eff, shName } = c;
   const [file, setFile] = useState<File>();
@@ -510,12 +434,12 @@ function UploadDialog(c: Ctx & { id: number; onClose: () => void }) {
         <p className="text-sm text-muted-foreground">
           {eff(id).t} — {shName(eff(id).s)}
         </p>
-        <FilePick t={t} file={file} onPick={setFile} />
+        <Dropzone t={t} file={file} onPick={setFile} exts={AUDIO_EXT} mime="audio/*" maxMB={AUDIO_MAX_MB} label={t("wiz.dropAudio")} hint={t("wiz.dropAudioHint", { max: AUDIO_MAX_MB })} />
         <DialogFooter>
           <Button
-            disabled={!file || file.size > MAX}
+            disabled={!file || !c.data.uploads}
             onClick={() => {
-              c.setFiles((f) => ({ ...f, [id]: file! }));
+              c.addJob(id, "audio", file!);
               c.setOv((o) => ({ ...o, edit: { ...o.edit, [id]: { ...(o.edit[id] ?? {}), p: 1 } } }));
               toast(t("readyHint"));
               c.onClose();
@@ -732,136 +656,6 @@ function EditDialog(c: Ctx & { id: number; onClose: () => void }) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function AddView(c: Ctx) {
-  const { t, data, ov, setOv, files, setFiles, eff } = c;
-  const [prefill] = useState(() => {
-    try {
-      const v = sessionStorage.getItem("lawha:add") ?? "";
-      sessionStorage.removeItem("lawha:add");
-      return v;
-    } catch {
-      return "";
-    }
-  });
-  const [v, setV] = useState(() => ({ id: prefill, k: DEFAULT_TYPE as Kind, t: "", s: data.sheikhs[0]?.key ?? "", ...today(), vid: "", au: "", series: "" }));
-  const [file, setFile] = useState<File>();
-  const [err, setErr] = useState("");
-  // a clip that isn't on Telegram gets its own number, from 1,000,000 up (never clashes with the channel)
-  const nextId = () => String(Math.max(SITE_ID_START - 1, ...[...Object.keys(data.lessons), ...Object.keys(ov.add)].map(Number).filter((n) => n >= SITE_ID_START)) + 1);
-  const add = async () => {
-    const id = v.id || nextId();
-    if (!/^\d+$/.test(id)) return setErr(t("errId"));
-    if (data.lessons[id] || ov.add[id]) return setErr(t("errExists"));
-    if (!file && !v.vid.trim() && !v.au.trim()) return setErr(t("errMedia"));
-    if (file && file.size > MAX) return setErr(t("errSize"));
-    const bad = mediaError(t, v.vid, v.au);
-    if (bad) return setErr(bad);
-    if (!v.t.trim()) return setErr(t("errTitle"));
-    const d = file ? await durationOf(file) : "";
-    const [series, sec] = v.series.split("|");
-    const media = { ...(v.vid.trim() ? { vid: v.vid.trim() } : {}), ...(v.au.trim() ? { au: v.au.trim() } : {}) };
-    setOv((o) => ({ ...o, add: { ...o.add, [id]: { t: v.t.trim(), s: v.s, k: v.k, h: v.h.trim(), ...(v.g ? { g: v.g } : {}), d, p: file ? 1 : 0, ...media, series: series ?? "", sec: sec ?? "" } } }));
-    if (file) setFiles((f) => ({ ...f, [Number(id)]: file }));
-    setV({ ...v, id: "", t: "", vid: "", au: "", ...today() });
-    setFile(undefined);
-    setErr("");
-    toast(t("addedHint"));
-  };
-  return (
-    <>
-      <div className="flex flex-col gap-3 rounded-xl border bg-card p-5">
-        <h2 className="text-lg font-extrabold">{t("addTitle")}</h2>
-        <p className="text-sm text-muted-foreground">{t("addHint")}</p>
-        {!data.uploads ? <p className="rounded-lg bg-muted p-3 text-sm">{t("uploadsOff")}</p> : null}
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className={field}>
-            {t("fieldId")}
-            <input className={control} inputMode="numeric" placeholder={t("idAuto")} value={v.id} onChange={(e) => setV({ ...v, id: e.target.value.trim() })} />
-          </label>
-          <label className={field}>
-            {t("fieldKind")}
-            <select className={control} value={v.k} onChange={(e) => setV({ ...v, k: e.target.value as Kind })}>
-              {KINDS.map((k) => (
-                <option key={k} value={k}>
-                  {c.tk(k)}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <FilePick t={t} file={file} onPick={setFile} />
-        <MediaFields t={t} vid={v.vid} au={v.au} onChange={(m) => setV({ ...v, ...m })} />
-        <label className={field}>
-          {t("fieldTitle")}
-          <input className={control} placeholder={t("titlePlaceholder")} value={v.t} onChange={(e) => setV({ ...v, t: e.target.value })} />
-        </label>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className={field}>
-            {t("fieldSheikh")}
-            <select className={control} value={v.s} onChange={(e) => setV({ ...v, s: e.target.value })}>
-              {data.sheikhs.map((s) => (
-                <option key={s.key} value={s.key}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <DateField t={t} h={v.h} g={v.g} onChange={(d) => setV({ ...v, ...d })} />
-        </div>
-        <label className={field}>
-          {t("fieldSeries")}
-          <select className={control} value={v.series} onChange={(e) => setV({ ...v, series: e.target.value })}>
-            <option value="">{t("noSeries")}</option>
-            {c.seriesOpts.map(([k, label]) => (
-              <option key={k} value={k}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-        {/* uploading a file needs the Blob store; links don't */}
-        <Button onClick={add} disabled={!!file && !data.uploads} className="h-10 gap-2 self-start px-5 font-bold">
-          <CirclePlus className="size-5" />
-          {t("add")}
-        </Button>
-        {err ? <p className="text-sm text-destructive">{err}</p> : null}
-      </div>
-      {Object.keys(files).length ? (
-        <>
-          <H2>{t("waiting")}</H2>
-          <Card>
-            {Object.entries(files).map(([i, f]) => (
-              <Row key={i} id={i} title={eff(Number(i)).t} sub={`${f.name} · ${(f.size / 1e6).toFixed(1)} MB`}>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  className="gap-1.5"
-                  onClick={() => {
-                    setFiles((x) => {
-                      const n = { ...x };
-                      delete n[Number(i)];
-                      return n;
-                    });
-                    if (ov.add[i] && !data.lessons[i])
-                      setOv((o) => {
-                        const add = { ...o.add };
-                        delete add[i];
-                        return { ...o, add };
-                      });
-                  }}
-                >
-                  <Trash2 className="size-4" />
-                  {t("remove")}
-                </Button>
-              </Row>
-            ))}
-          </Card>
-        </>
-      ) : null}
-    </>
   );
 }
 

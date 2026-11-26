@@ -18,6 +18,12 @@ export function applyOverrides(source: Library, o: Overrides): Site {
     }
   };
 
+  // series created from the dashboard (empty ones are dropped at the end)
+  for (const ns of o.series) {
+    const sh = lib.sheikhs.find((x) => x.key === ns.sheikh);
+    if (sh && !allSeries().some(({ se }) => se.key === ns.key)) (sh.series ??= []).push({ key: ns.key, title: ns.title, sections: [{ t: "", ids: [] }] });
+  }
+
   const entries = [
     ...Object.entries(o.add).map(([k, v]) => ({ k, e: v as Overrides["edit"][string] & Partial<Library["lessons"][string]>, isNew: true })),
     ...Object.entries(o.edit).map(([k, v]) => ({ k, e: v as Overrides["edit"][string] & Partial<Library["lessons"][string]>, isNew: false })),
@@ -71,5 +77,7 @@ export function applyOverrides(source: Library, o: Overrides): Site {
     const sh = byKey.get(L.s);
     if (sh && !inSeriesSet.has(id) && !inColl.has(id)) (sh.byType[L.k] ??= []).push(id);
   }
+  // a series with no lessons left doesn't show
+  for (const sh of lib.sheikhs) if (sh.series) sh.series = sh.series.filter((se) => se.sections.some((x) => x.ids.length));
   return { ...lib, featured: o.featured.filter((i) => lib.lessons[i]) };
 }

@@ -6,6 +6,13 @@
  * Pure and small: used by the server, the player and the dashboard.
  */
 
+/** Files the dashboard uploads: audio in any common format (the GitHub Action converts it to mp3), video (made into mp4). */
+export const AUDIO_EXT = ["mp3", "m4a", "aac", "wav", "ogg", "oga", "opus", "flac", "weba", "amr", "wma", "3gp"];
+export const VIDEO_EXT = ["mp4", "mov", "m4v", "webm", "mkv", "avi", "3gp"];
+export const AUDIO_MAX_MB = 500;
+/** The lower-case extension of a file name («Lesson.M4A» → «m4a»). */
+export const extOf = (name: string) => (/\.([a-z0-9]{2,4})$/i.exec(name)?.[1] ?? "").toLowerCase();
+
 export type VideoSource = "youtube" | "facebook" | "drive" | "link" | "file";
 export const VIDEO_SOURCES: VideoSource[] = ["youtube", "facebook", "drive", "link", "file"];
 

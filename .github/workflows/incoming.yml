@@ -1,8 +1,9 @@
-name: Move new audio to the audio store
-# The dashboard stages new audio in one of two ways:
-#   incoming/<id>.json  → {"url": "<Vercel Blob URL>"}  (v2 dashboard: uploaded from the browser to Vercel Blob)
-#   incoming/<id>.mp3   → the file itself              (v1 dashboard)
-# Here each file is uploaded (GitHub Release audio-<id/500>, or the S3 bucket) and removed from the repository.
+name: Move new audio and video to the audio store
+# The dashboard stages new files in these ways:
+#   incoming/<id>.json        → {"url": "<Vercel Blob URL>", "ext": "m4a"}  audio, any format (converted to mp3 here)
+#   incoming/<id>.video.json  → {"url": "<Vercel Blob URL>", "ext": "mov"}  video (made into a web-friendly mp4 here)
+#   incoming/<id>.mp3         → the file itself                              (v1 dashboard)
+# Each file is uploaded (GitHub Release audio-<id/500>, or the S3 bucket) as <id>.mp3 / <id>.mp4 and removed from the repository.
 on:
   push:
     branches: [main]
@@ -29,25 +30,48 @@ jobs:
           shopt -s nullglob
           provider=$(jq -r '.storage.audio.provider // "github-releases"' site.config.json)
           moved=0
-          mkdir -p /tmp/audio
+          mkdir -p /tmp/in /tmp/out
+          need_ffmpeg() { command -v ffmpeg >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg >/dev/null; }; }
           for f in incoming/*.json incoming/*.mp3; do
-            id=$(basename "$f"); id=${id%.*}
+            name=$(basename "$f")
+            case "$name" in
+              (*.video.json) kind=video; id=${name%.video.json} ;;
+              (*.json) kind=audio; id=${name%.json} ;;
+              (*.mp3) kind=audio; id=${name%.mp3} ;;
+            esac
             case "$id" in (*[!0-9_]*|'') echo "Bad name: $f"; continue;; esac
-            if [ "${f##*.}" = "json" ]; then
+            if [ "${name##*.}" = "json" ]; then
               url=$(jq -r .url "$f")
+              ext=$(jq -r '.ext // "mp3"' "$f")
               case "$url" in (https://*.public.blob.vercel-storage.com/*) ;; (*) echo "Bad URL in $f"; continue;; esac
-              curl -fsSL "$url" -o "/tmp/audio/$id.mp3" || { echo "Download failed: $f"; continue; }
-              src="/tmp/audio/$id.mp3"
+              case "$ext" in (*[!a-z0-9]*|'') echo "Bad type in $f"; continue;; esac
+              in="/tmp/in/$id.$kind.$ext"
+              curl -fsSL "$url" -o "$in" || { echo "Download failed: $f"; continue; }
             else
-              src="$f"
+              in="$f"; ext=mp3
+            fi
+            if [ "$kind" = "video" ]; then
+              # an mp4 that starts playing before it has fully downloaded; re-encode only if the format needs it
+              out="/tmp/out/$id.mp4"; type=video/mp4
+              need_ffmpeg
+              ffmpeg -nostdin -loglevel error -y -i "$in" -c copy -movflags +faststart "$out" ||
+                ffmpeg -nostdin -loglevel error -y -i "$in" -c:v libx264 -preset veryfast -crf 26 -c:a aac -b:a 128k -movflags +faststart "$out" ||
+                { echo "Could not convert: $f"; continue; }
+            elif [ "$ext" != "mp3" ]; then
+              out="/tmp/out/$id.mp3"; type=audio/mpeg
+              need_ffmpeg
+              ffmpeg -nostdin -loglevel error -y -i "$in" -vn -codec:a libmp3lame -q:a 5 "$out" || { echo "Could not convert: $f"; continue; }
+            else
+              out="/tmp/out/$id.mp3"; type=audio/mpeg
+              cp "$in" "$out"
             fi
             if [ "$provider" = "s3" ]; then
-              aws s3 cp "$src" "s3://$S3_BUCKET/$id.mp3" --endpoint-url "$S3_ENDPOINT" --content-type audio/mpeg
+              aws s3 cp "$out" "s3://$S3_BUCKET/$(basename "$out")" --endpoint-url "$S3_ENDPOINT" --content-type "$type"
             else
               num=${id%%_*}
               tag="audio-$((num / 500))"
               gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --title "Audio $tag" --notes "Audio files of the site"
-              gh release upload "$tag" "$src" --clobber
+              gh release upload "$tag" "$out" --clobber
             fi
             git rm -q "$f"
             moved=$((moved + 1))
@@ -55,6 +79,6 @@ jobs:
           if [ "$moved" -gt 0 ]; then
             git config user.name "github-actions"
             git config user.email "github-actions@users.noreply.github.com"
-            git commit -qm "Move $moved audio file(s) to Releases"
+            git commit -qm "Move $moved file(s) to the audio store"
             git push
           fi

@@ -21,6 +21,7 @@ const edits: Overrides = {
   add: { "99999": { t: "New", s: library.sheikhs[0].key, k: "lesson", d: "1:00", h: "", p: 1 } },
   featured: [Number(firstId)],
   ignore: [12345],
+  series: [],
 };
 
 async function contract(name: string, store: ReturnType<typeof sqlStore>) {
