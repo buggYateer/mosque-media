@@ -6,7 +6,8 @@ import { useEffect, useState } from "react";
 import { Link } from "@/i18n/navigation";
 import { fmtTime } from "@/lib/text";
 import { cn } from "@/lib/utils";
-import { Cover, KIND_ICON, toneBg } from "../cover";
+import { Cover, toneBg } from "../cover";
+import { TypeIcon } from "../icons";
 import { ShareButton } from "../share-button";
 import { MiniMenu } from "../mini-menu";
 import { SPEEDS, usePlayer } from "./player-provider";
@@ -37,7 +38,6 @@ export function PlayerBar() {
   const { cur, dur } = useTime(p.audio.current);
   if (!p.current) return null;
   const L = p.current;
-  const Icon = KIND_ICON[L.k];
   const pct = dur ? (cur / dur) * 100 : 0;
   const ex = p.expanded;
 
@@ -68,9 +68,11 @@ export function PlayerBar() {
       <a href={p.downloadUrl(L.id)} className={cn(iconBtn, !ex && "max-md:hidden")} aria-label={t("common.download")} title={t("common.download")}>
         <Download className="size-5" />
       </a>
-      <a href={p.telegramUrl(L.id)} target="_blank" rel="noopener" className={iconBtn} aria-label={t("player.openTelegram")} title={t("player.openTelegram")}>
-        <Send className="size-5 rtl:-scale-x-100" />
-      </a>
+      {p.telegramUrl(L.id) ? (
+        <a href={p.telegramUrl(L.id)} target="_blank" rel="noopener" className={iconBtn} aria-label={t("player.openTelegram")} title={t("player.openTelegram")}>
+          <Send className="size-5 rtl:-scale-x-100" />
+        </a>
+      ) : null}
       {!ex && (
         <button className={iconBtn} onClick={p.close} aria-label={t("player.close")}>
           <X className="size-5" />
@@ -177,7 +179,7 @@ export function PlayerBar() {
         <div className="flex min-w-0 items-center gap-1">
         <button className="flex min-w-0 flex-1 items-center gap-3 text-start" onClick={() => p.setExpanded(true)} aria-label={t("player.expand")}>
           <span className={cn("grid size-11 shrink-0 place-items-center rounded-md text-white", toneBg(L.sh?.tone))}>
-            <Icon className="size-5" />
+            <TypeIcon kind={L.k} className="size-5" />
           </span>
           <span className="min-w-0">
             <span className="block truncate font-bold">

@@ -22,11 +22,12 @@ Run `pnpm dev` in the background and tell the user to open http://localhost:3000
 ### 3. Identity and mosque details
 Ask, one or two questions at a time:
 - Mosque name, a short name (for the app icon), and a one-line description
-- Telegram channel username (it must be **public**)
+- Telegram channel username, if they have one (it must be **public**; the site also works without a channel)
 - GitHub username and the repo name they want
 - **The look:** overall feel (calm / modern / traditional / bold), main color, highlight color, font (`Cairo`, `Tajawal`, `Almarai`, `Noto Kufi Arabic`, `Readex Pro`, `El Messiri`, `Changa`, `Rubik`), corners (`sharp` / `soft` / `round`), header (`light` / `colored`)
 - Do they have a logo? Ask them to save it as `assets/logo.png` (square, transparent, ~512px) or `assets/logo.svg`.
 - Sheikhs: full name, a nickname used in captions, whether they give a fixed weekly lesson and on which day
+- **Their way of doing things** (don't assume ours): dates as hijri, gregorian, both or none (`dates.calendar`); their content types (`types`: rename lesson/khutba/tilawa/other, drop some, or add their own such as «lectures» or «kids lessons»); the title before a speaker's name if not «الشيخ» (`texts`, keys from `messages/<lang>.json`); which home sections to show (`home`); and whether they have a Telegram channel at all (`telegramChannel` is optional). See `docs/guide-ar.md` → «خصّص موقعك».
 
 Offer **3 distinct style suggestions** and let the user pick. Also ask which **languages** the site should have (`i18n.default` and `i18n.locales`: ar, en, ur, hi, ru). Then write `site.config.json` directly. `tools/setup.py` is interactive, so it's meant for users running it themselves. Run `python tools/apply_config.py` to validate, then show the result in the preview on desktop, on mobile, and in dark mode. Adjust components (`components/`) only if they want more than the config offers.
 

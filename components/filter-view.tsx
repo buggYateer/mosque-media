@@ -1,12 +1,14 @@
 "use client";
 
 import { SlidersHorizontal } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import type { Item } from "@/lib/library";
-import { hijriMonth, SURAHS_AR, SURAHS_LATIN, surahNo, surahsOf } from "@/lib/text";
+import { monthOf } from "@/lib/dates";
+import { CALENDAR } from "@/lib/site-shared";
+import { SURAHS_AR, SURAHS_LATIN, surahNo, surahsOf } from "@/lib/text";
 import { cn } from "@/lib/utils";
 import { LessonList } from "./lesson-list";
 
@@ -16,7 +18,7 @@ type Def = { label: string; all: string; of: (i: Item) => string[]; name: (k: st
 
 export function FilterView({
   items,
-  facets,
+  facets: facetsIn,
   unitKey,
   quickSheikhs,
   surahLatin,
@@ -35,7 +37,10 @@ export function FilterView({
   const router = useRouter();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const locale = useLocale();
   const months = t.raw("common.months") as string[];
+  // no month filter when the site shows no dates
+  const facets = CALENDAR === "none" ? facetsIn.filter((f) => f !== "month") : facetsIn;
 
   const defs: Record<Facet, Def> = useMemo(
     () => ({
@@ -45,10 +50,13 @@ export function FilterView({
         label: t("filters.month"),
         all: t("filters.allMonths"),
         of: (i) => {
-          const m = hijriMonth(i.h);
+          const m = monthOf(i, { months, hijriSuffix: "", locale });
           return m ? [m.key] : [];
         },
-        name: (k) => `${months[+k.split("-")[1] - 1]} ${k.split("-")[0]}`,
+        name: (k) => {
+          const i = items.find((x) => monthOf(x, { months, hijriSuffix: "", locale })?.key === k);
+          return (i && monthOf(i, { months, hijriSuffix: "", locale })?.label) || k;
+        },
         sort: (a, b) => b.localeCompare(a),
       },
       surah: {
@@ -65,7 +73,7 @@ export function FilterView({
         name: (k) => (k === "_" ? t("filters.loose") : (items.find((i) => i.se?.key === k)?.se?.title ?? k)),
       },
     }),
-    [t, items, months, surahLatin],
+    [t, items, months, surahLatin, locale],
   );
 
   const sel = Object.fromEntries(facets.map((f) => [f, q.get(f) ?? ""])) as Record<Facet, string>;

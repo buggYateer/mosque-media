@@ -1,21 +1,23 @@
 "use client";
 
 import { Pause, Play } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { Link } from "@/i18n/navigation";
 import type { Item } from "@/lib/library";
-import { formatHijri, parseDur } from "@/lib/text";
+import { dateText } from "@/lib/dates";
+import { parseDur } from "@/lib/text";
 import { cn } from "@/lib/utils";
 import { Cover } from "./cover";
 import { useStored } from "@/lib/use-stored";
 import { usePlayer } from "./player/player-provider";
 
-export function useHijri() {
+/** The date of a recording as text, in the calendar the mosque chose (site.config.json → dates). */
+export function useDateText() {
   const t = useTranslations("common");
-  const months = t.raw("months") as string[];
-  const suffix = t("hijriSuffix");
-  return (h: string) => formatHijri(h, months, suffix);
+  const locale = useLocale();
+  const w = { months: t.raw("months") as string[], hijriSuffix: t("hijriSuffix"), locale };
+  return (item: { h: string; g?: string }) => dateText(item, w);
 }
 
 const BADGE: Record<string, string> = {
@@ -27,7 +29,7 @@ const BADGE: Record<string, string> = {
 
 export function KindBadge({ kind }: { kind: Item["k"] }) {
   const t = useTranslations("kind");
-  return <span className={cn("me-1.5 inline-block rounded-full px-2 align-[2px] text-xs font-bold", BADGE[kind])}>{t(kind)}</span>;
+  return <span className={cn("me-1.5 inline-block rounded-full px-2 align-[2px] text-xs font-bold", BADGE[kind] ?? "bg-accent text-accent-foreground")}>{t(kind)}</span>;
 }
 
 /** Listening progress saved on this device. */
@@ -72,7 +74,7 @@ export function PlayButton({ item, list, className, size = "md" }: { item: Item;
 export function LessonRow({ item, list, showSheikh, showKind }: { item: Item; list: Item[]; showSheikh?: boolean; showKind?: boolean }) {
   const p = usePlayer();
   const t = useTranslations("common");
-  const hijri = useHijri();
+  const date = useDateText();
   const on = p.current?.id === item.id;
   return (
     <div
@@ -97,9 +99,9 @@ export function LessonRow({ item, list, showSheikh, showKind }: { item: Item; li
               {item.sh.name}
             </Link>
           ) : null}
-          {item.h ? <span>{hijri(item.h)}</span> : null}
+          {date(item) ? <span>{date(item)}</span> : null}
           {item.d ? <span className="tabular-nums">{item.d}</span> : null}
-          {!item.p ? (
+          {!item.p && p.telegramUrl(item.id) ? (
             <a href={p.telegramUrl(item.id)} target="_blank" rel="noopener" className="text-primary underline">
               {t("telegramOnly")}
             </a>

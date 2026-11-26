@@ -262,6 +262,7 @@
     "fieldSheikh": "Sheikh",
     "fieldKind": "Type",
     "fieldDate": "Hijri date (day-month-year)",
+    "fieldDateG": "Gregorian date",
     "fieldSeries": "Series",
     "noSeries": "— No series —",
     "hidden": "Hidden from the site",

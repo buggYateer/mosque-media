@@ -9,6 +9,7 @@
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Item } from "@/lib/library";
+import { SITE_ID_START } from "@/lib/site-shared";
 import { readStored, useStored, writeStored } from "@/lib/use-stored";
 
 export const SPEEDS = [0.75, 1, 1.25, 1.5, 1.75, 2];
@@ -41,6 +42,7 @@ type PlayerApi = PlayerState & {
   setExpanded: (on: boolean) => void;
   close: () => void;
   audioUrl: (id: number, part: number, parts: number) => string;
+  /** The clip's Telegram post, or "" when there is no channel or the clip was added on the site. */
   telegramUrl: (id: number) => string;
   downloadUrl: (id: number, part?: number) => string;
   siteName: string;
@@ -230,7 +232,7 @@ export function PlayerProvider({ children, audioBase, channel, siteName, logo }:
       setExpanded,
       close,
       audioUrl,
-      telegramUrl: (id) => `https://t.me/${channel}/${id}`,
+      telegramUrl: (id) => (channel && id < SITE_ID_START ? `https://t.me/${channel}/${id}` : ""),
       downloadUrl: (id, part) => `/api/dl?id=${id}${part && part > 1 ? `&p=${part}` : ""}`,
       siteName,
     }),

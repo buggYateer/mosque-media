@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { Crumbs } from "@/components/blocks";
 import { Cover } from "@/components/cover";
 import { LessonActions } from "@/components/lesson-actions";
 import { Link } from "@/i18n/navigation";
 import { getLookup, getSite } from "@/lib/data";
-import { formatHijri } from "@/lib/text";
+import { dateText } from "@/lib/dates";
 
 export async function generateStaticParams() {
   return Object.keys((await getSite()).lessons).map((id) => ({ id }));
@@ -29,8 +29,8 @@ export async function generateMetadata({ params }: PageProps<"/[locale]/l/[id]">
 /** One page per recording: shareable link with its own title and preview. */
 export default async function LessonPage({ params }: PageProps<"/[locale]/l/[id]">) {
   const { item } = await find(params);
-  const t = await getTranslations();
-  const hijri = formatHijri(item.h, t.raw("common.months") as string[], t("common.hijriSuffix"));
+  const [t, locale] = await Promise.all([getTranslations(), getLocale()]);
+  const date = dateText(item, { months: t.raw("common.months") as string[], hijriSuffix: t("common.hijriSuffix"), locale });
   return (
     <main className="mx-auto max-w-6xl px-4 pt-5">
       <Crumbs
@@ -70,7 +70,7 @@ export default async function LessonPage({ params }: PageProps<"/[locale]/l/[id]
               </>
             ) : null}
           </p>
-          <p className="text-muted-foreground">{[hijri, item.d].filter(Boolean).join(" · ")}</p>
+          <p className="text-muted-foreground">{[date, item.d].filter(Boolean).join(" · ")}</p>
           <LessonActions item={item} />
         </div>
       </article>

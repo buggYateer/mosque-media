@@ -262,6 +262,7 @@
     "fieldSheikh": "شیخ",
     "fieldKind": "قسم",
     "fieldDate": "ہجری تاریخ (دن-مہینہ-سال)",
+    "fieldDateG": "عیسوی تاریخ",
     "fieldSeries": "سلسلہ",
     "noSeries": "— بغیر سلسلہ —",
     "hidden": "سائٹ سے پوشیدہ",

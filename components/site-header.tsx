@@ -3,7 +3,8 @@ import { Suspense } from "react";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { config } from "@/lib/config";
-import { getCategories, getLookup } from "@/lib/data";
+import { catLabel, getCategories, getLookup } from "@/lib/data";
+import { TYPE_KEYS } from "@/lib/site-shared";
 import { DrawerMenu, SearchBar, type NavGroup } from "./header-client";
 import { LocaleSwitcher } from "./locale-switcher";
 import { Logo } from "./logo";
@@ -18,9 +19,12 @@ const NAV = [
 ] as const;
 
 export async function SiteHeader() {
-  const [t, cats, lk] = await Promise.all([getTranslations("nav"), getCategories(), getLookup()]);
+  const [t, tAll, cats, lk] = await Promise.all([getTranslations("nav"), getTranslations(), getCategories(), getLookup()]);
+  const hasWeekly = lk.site.sheikhs.some((s) => s.main);
+  // links in the top bar: sermons only if the site has that type, weekly only if there are weekly sheikhs
+  const nav = NAV.filter(([key]) => (key !== "khutab" || TYPE_KEYS.includes("khutba")) && (key !== "weekly" || hasWeekly));
   const groups: NavGroup[] = [
-    { title: t("sections"), items: cats.map((c) => ({ href: c.href, label: c.label ?? t(c.key as "lessons"), icon: c.icon, n: c.n })) },
+    { title: t("sections"), items: cats.map((c) => ({ href: c.href, label: catLabel(c, (k) => tAll(k as "nav.lessons")), icon: c.icon, n: c.n })) },
     {
       title: t("browse"),
       items: [
@@ -28,7 +32,7 @@ export async function SiteHeader() {
         { href: "/all", label: t("all"), icon: "library", n: lk.ids.length },
         { href: "/latest", label: t("latest"), icon: "latest" },
         { href: "/popular", label: t("popular"), icon: "popular" },
-        { href: "/weekly", label: t("weekly"), icon: "weekly", n: lk.site.sheikhs.filter((s) => s.main).length },
+        ...(hasWeekly ? [{ href: "/weekly", label: t("weekly"), icon: "weekly", n: lk.site.sheikhs.filter((s) => s.main).length }] : []),
         { href: "/series", label: t("series"), icon: "lesson", n: lk.site.sheikhs.reduce((a, s) => a + (s.series?.length ?? 0), 0) },
       ],
     },
@@ -43,7 +47,7 @@ export async function SiteHeader() {
           <span className="mm-brand-name truncate">{config.name}</span>
         </Link>
         <nav aria-label={t("menu")} className="mm-nav me-2 hidden items-center gap-0.5 xl:flex">
-          {NAV.map(([key, href]) => (
+          {nav.map(([key, href]) => (
             <Link key={key} href={href} className="rounded-md px-3 py-1.5 text-[15px] font-semibold whitespace-nowrap opacity-80 hover:bg-header-foreground/10 hover:opacity-100">
               {t(key)}
             </Link>
@@ -54,6 +58,7 @@ export async function SiteHeader() {
         </Suspense>
         <ThemeToggle />
         <SearchBar />
+        {config.telegramChannel ? (
         <a
           href={`https://t.me/${config.telegramChannel}`}
           target="_blank"
@@ -63,6 +68,7 @@ export async function SiteHeader() {
           <Send className="size-4 rtl:-scale-x-100" />
           <span className="hidden sm:inline">{t("telegram")}</span>
         </a>
+        ) : null}
       </div>
     </header>
   );

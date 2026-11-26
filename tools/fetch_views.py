@@ -18,7 +18,7 @@ OUT = SITE / "data" / "views.json"
 sys.path.insert(0, str(SITE / "tools"))
 from apply_config import load_config  # noqa: E402
 
-CH = load_config()["telegramChannel"]
+CH = load_config()["telegramChannel"]  # فاضي لو المسجد مالوش قناة
 
 
 def parse(v):
@@ -41,6 +41,8 @@ def views(i):
 
 
 def main():
+    if not CH:
+        return print("مشاهدات: مفيش قناة تليجرام، اتخطّيت الخطوة دي")
     msgs = json.loads((SITE / "data" / "messages.json").read_text(encoding="utf-8"))
     ids = [m["id"] for m in msgs if not m.get("demo")]
     if not ids:

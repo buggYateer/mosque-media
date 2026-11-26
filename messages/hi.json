@@ -262,6 +262,7 @@
     "fieldSheikh": "शेख़",
     "fieldKind": "प्रकार",
     "fieldDate": "हिजरी तारीख़ (दिन-महीना-साल)",
+    "fieldDateG": "ईसवी तारीख़",
     "fieldSeries": "सिलसिला",
     "noSeries": "— बिना सिलसिले के —",
     "hidden": "साइट से छिपाएँ",

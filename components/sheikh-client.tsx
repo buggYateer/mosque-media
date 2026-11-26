@@ -5,10 +5,10 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 import type { Item } from "@/lib/library";
 import { cn } from "@/lib/utils";
-import { LessonList, PlayButton, useHijri } from "./lesson-list";
+import { LessonList, PlayButton, useDateText } from "./lesson-list";
 
 export function LatestCard({ item, label }: { item: Item; label: string }) {
-  const hijri = useHijri();
+  const date = useDateText();
   return (
     <div className="mm-latest mb-4 flex items-center gap-3.5 rounded-xl border border-s-[5px] border-s-highlight bg-card px-4 py-3.5">
       <PlayButton item={item} list={[item]} size="lg" />
@@ -16,8 +16,7 @@ export function LatestCard({ item, label }: { item: Item; label: string }) {
         <small className="font-bold text-muted-foreground">{label}</small>
         <div className="text-[17px] font-bold">{item.t}</div>
         <div className="text-[13.5px] text-muted-foreground">
-          {hijri(item.h)}
-          {item.d ? ` — ${item.d}` : ""}
+          {[date(item), item.d].filter(Boolean).join(" — ")}
         </div>
       </div>
     </div>

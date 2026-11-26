@@ -48,7 +48,7 @@ The assistant follows [AGENTS.md](AGENTS.md). It checks your tools, asks about y
 - **Installable app (PWA)** with dark mode, offline support and a fast mobile-first design.
 - **5 languages built in.** Arabic, English, Urdu, Hindi and Russian, each with its own address (`/en`, `/ur`…) and a language switch in the top bar. Adding another language is one translation file.
 - **Your choice of storage.** JSON files in the repo (free, default), or PostgreSQL / Supabase / Neon / SQLite / Turso. Audio on GitHub Releases (free, default) or any S3-compatible bucket such as Cloudflare R2.
-- **Your own identity.** Your logo, colors, font, corner style and header style are set with a short questionnaire.
+- **Your own identity and your own way.** Your logo, colors, font, corner style and header style are set with a short questionnaire. Dates (hijri, gregorian or both), content types, the title before a speaker's name, home sections and any wording can all be changed ([details](#customize-everything)).
 - **Fast.** Every page is prerendered at build time; each recording has its own shareable page with a proper title and preview image.
 
 <p align="center">
@@ -124,6 +124,20 @@ python tools/update_site.py --export "path/to/new/export"
 ```
 
 A detailed, beginner-friendly guide in Arabic is in **[docs/guide-ar.md](docs/guide-ar.md)**.
+
+## Customize everything
+
+Nothing is forced on a mosque. All of this lives in `site.config.json` and has a default, so you only add what you want to change.
+
+| Setting | What it does |
+|---|---|
+| `"dates": { "calendar": "both" }` | Dates in `hijri`, `gregorian`, `both`, or `none`. `hijriOffset` (−2…2) adjusts for local moon sighting. |
+| `"types": [...]` | The content types. Rename the built-in ones (`lesson`, `khutba`, `tilawa`, `other`), drop some, or add your own with a `name`, `plural`, `icon` and the caption `words` that detect it. New types get a page at `/t/<key>`. |
+| `"texts": { "ar": { "common.sheikh": "الأستاذ" } }` | Change any wording of the site, per language. Keys come from `messages/<language>.json`. |
+| `"home": ["feature", "categories", "latest"]` | Which home sections show, and in what order. |
+| `telegramChannel` | Optional. Without it, every Telegram button disappears. |
+
+Run `python tools/apply_config.py` after a change; it points to the exact mistake if there is one. The Arabic guide has examples.
 
 ## Languages
 

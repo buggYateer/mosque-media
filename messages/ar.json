@@ -262,6 +262,7 @@
     "fieldSheikh": "الشيخ",
     "fieldKind": "النوع",
     "fieldDate": "التاريخ الهجري (يوم-شهر-سنة)",
+    "fieldDateG": "التاريخ الميلادي",
     "fieldSeries": "السلسلة",
     "noSeries": "— من غير سلسلة —",
     "hidden": "مخفي من الموقع",

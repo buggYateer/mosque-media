@@ -64,7 +64,9 @@ def main():
     cfg["name"] = ask("اسم المسجد زي ما يظهر في الموقع؟", old.get("name", ""))
     cfg["shortName"] = ask("اسم قصير يظهر تحت أيقونة التطبيق (10 حروف تقريبًا)؟", old.get("shortName") or cfg["name"])
     cfg["description"] = ask("سطر يوصف الموقع (بيظهر في جوجل وواتساب)؟", old.get("description") or f"دروس وخطب وتلاوات {cfg['name']} — استمع من الموقع مباشرة")
-    cfg["telegramChannel"] = ask("يوزر قناة التليجرام (من غير @)؟", old.get("telegramChannel", "")).lstrip("@").replace("https://t.me/", "").strip("/")
+    cfg["telegramChannel"] = ask("يوزر قناة التليجرام (من غير @)؟ — لو مالكش قناة اكتب - ", old.get("telegramChannel", "")).lstrip("@").replace("https://t.me/", "").strip("/")
+    if cfg["telegramChannel"] in ("-", "لا", "مفيش"):
+        cfg["telegramChannel"] = ""
     gh_user = ask("اسم حسابك على GitHub؟ (لو لسه معملتوش سيبه فاضي)", (old.get("githubRepo", "/").split("/")[0]).replace("YOUR_GITHUB_USERNAME", ""))
     repo = ask("اسم المستودع (الريبو) اللي هتعمله على GitHub؟", (old.get("githubRepo", "/masjed-site").split("/") + ["masjed-site"])[1] or "masjed-site")
     cfg["githubRepo"] = f"{gh_user or 'YOUR_GITHUB_USERNAME'}/{repo}"
@@ -98,6 +100,12 @@ def main():
     locs = [LOCALES[d]] + [x for x in extra.split() if x in LOCALES and x != LOCALES[d]]
     cfg["i18n"] = {"default": LOCALES[d], "locales": locs}
 
+    print("\n———— التاريخ ————")
+    cals = ["hijri", "gregorian", "both", "none"]
+    od = old.get("dates", {})
+    k = choose("التاريخ يظهر إزاي جنب كل مقطع؟", ["هجري", "ميلادي", "الاتنين (هجري · ميلادي)", "مايظهرش"], cals.index(od.get("calendar", "hijri")) + 1 if od.get("calendar") in cals else 1)
+    cfg["dates"] = {**od, "calendar": cals[k]}
+
     print("\n———— المشايخ ————")
     if old.get("sheikhs") and input("\nتحب تكتب المشايخ من الأول؟ (ن/ل) [ل]\n> ").strip() not in ("ن", "نعم", "y", "yes"):
         pass
@@ -127,12 +135,13 @@ def main():
     cfg.setdefault("ignore", [])
 
     cfg.setdefault("storage", {"data": {"provider": "github-json"}, "audio": {"provider": "github-releases"}})
-    order = ["name", "shortName", "description", "domain", "telegramChannel", "githubRepo", "audioBase", "colors", "design", "i18n", "storage", "sheikhs", "kinds", "sheikhPrefixes", "collections", "ignore"]
+    order = ["name", "shortName", "description", "domain", "telegramChannel", "githubRepo", "audioBase", "colors", "design", "i18n", "dates", "home", "storage", "sheikhs", "types", "kinds", "sheikhPrefixes", "collections", "texts", "ignore"]
     cfg = {k: cfg[k] for k in order if k in cfg} | {k: v for k, v in cfg.items() if k not in order}
     CFG.write_text(json.dumps(cfg, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print("\n✓ اتحفظ في site.config.json")
     subprocess.run([sys.executable, str(SITE / "tools" / "apply_config.py")])
     print("\nالخطوة الجاية: حط لوجو مسجدك في assets/logo.png (أو logo.svg)، وبعدها شغّل:  pnpm dev  وافتح http://localhost:3000")
+    print("أنواع المحتوى (درس، خطبة، تلاوة، أو أنواع خاصة بيك)، وأقسام الصفحة الرئيسية، وأي كلمة في الموقع: بتتغيّر من site.config.json — شوف الدليل (docs/guide-ar.md).")
 
 
 if __name__ == "__main__":

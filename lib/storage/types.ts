@@ -9,16 +9,20 @@
  */
 import { z } from "zod";
 
+/** The built-in content types. A site can add its own in site.config.json → types (see lib/site-shared.ts). */
 export const KINDS = ["lesson", "khutba", "tilawa", "other"] as const;
-export type Kind = (typeof KINDS)[number];
+/** A content type key: a built-in one or one from site.config.json. */
+export type Kind = string;
+const kindSchema = z.string().regex(/^[a-z][a-z0-9_-]*$/);
 
 /** One recording. Short keys keep lessons.json small (it is produced by tools/build_data.py). */
 export const lessonSchema = z.object({
   t: z.string(), // title
   s: z.string(), // sheikh key
-  k: z.enum(KINDS), // kind
+  k: kindSchema, // content type
   d: z.string().default(""), // duration "m:ss" / "h:mm:ss"
   h: z.string().default(""), // hijri date "d-m-yyyy" or free text
+  g: z.string().optional(), // gregorian date "yyyy-mm-dd"
   p: z.number().int().default(0), // number of audio parts available (0 = Telegram only)
   n: z.number().int().optional(), // number inside a series
   v: z.number().int().optional(), // Telegram views
@@ -39,6 +43,8 @@ export const sheikhDataSchema = z.object({
   tilawa: z.array(z.number().int()).default([]),
   other: z.array(z.number().int()).default([]),
   series: z.array(seriesSchema).optional(),
+  /** Loose recordings of this sheikh per content type (not in a series or a collection). Filled by applyOverrides. */
+  byType: z.record(z.string(), z.array(z.number().int())).default({}),
 });
 export type SheikhData = z.infer<typeof sheikhDataSchema>;
 export type Series = z.infer<typeof seriesSchema>;
@@ -63,8 +69,9 @@ export const overridesSchema = z.object({
       z.object({
         t: z.string().optional(),
         s: z.string().optional(),
-        k: z.enum(KINDS).optional(),
+        k: kindSchema.optional(),
         h: z.string().optional(),
+        g: z.string().optional(),
         hidden: z.boolean().optional(),
         series: z.string().optional(),
         sec: z.string().optional(),

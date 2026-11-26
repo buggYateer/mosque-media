@@ -24,6 +24,10 @@ LOCALES = ["ar", "en", "ur", "hi", "ru"]
 RESERVED_COLORS = ["#2e3f6b", "#1e2a4a", "#cfa64a", "#a8832f", "#26365e"]
 RESERVED_FONTS = {"alexandria", "ibm plex sans arabic"}
 
+BUILTIN_TYPES = ("lesson", "khutba", "tilawa", "other")
+CALENDARS = ("hijri", "gregorian", "both", "none")
+HOME = ("categories", "feature", "latestTilawat", "featured", "weekly", "latest", "popular", "series", "others")
+
 
 def fail(msg):
     sys.exit("✗ " + msg)
@@ -43,11 +47,12 @@ def load_config():
         cfg = json.loads(p.read_text(encoding="utf-8"))
     except json.JSONDecodeError as e:
         fail(f"في غلطة في site.config.json (سطر {e.lineno}): {e.msg}\n  غالبًا فاصلة ناقصة أو زيادة، أو علامة \" ناقصة.")
-    miss = [k for k in ("name", "telegramChannel", "githubRepo", "sheikhs") if not cfg.get(k)]
+    miss = [k for k in ("name", "githubRepo", "sheikhs") if not cfg.get(k)]
     if miss:
         fail("ناقص في site.config.json: " + "، ".join(miss))
     cfg.setdefault("shortName", cfg["name"])
-    cfg["telegramChannel"] = cfg["telegramChannel"].lstrip("@").replace("https://t.me/", "").strip("/")
+    # قناة التليجرام اختيارية — الموقع يشتغل من غيرها
+    cfg["telegramChannel"] = (cfg.get("telegramChannel") or "").strip().lstrip("@").replace("https://t.me/", "").strip("/")
     c = cfg.setdefault("colors", {})
     for k, v in list(c.items()):
         for x in (v if isinstance(v, list) else [v]):
@@ -66,12 +71,52 @@ def load_config():
     cfg["audioBase"] = (cfg.get("audioBase") or f"https://github.com/{cfg['githubRepo']}/releases/download").rstrip("/")
     for s in cfg["sheikhs"]:
         s.setdefault("name", s["key"].replace("_", " "))
+    check_types(cfg)
+    dates = cfg.setdefault("dates", {})
+    if dates.get("calendar", "hijri") not in CALENDARS:
+        fail(f"dates.calendar لازم يبقى واحد من دول: {', '.join(CALENDARS)}")
+    if not isinstance(dates.get("hijriOffset", 0), int) or not -2 <= dates.get("hijriOffset", 0) <= 2:
+        fail("dates.hijriOffset لازم يبقى رقم صحيح من -2 لـ 2 (فرق أيام التقويم الهجري في بلدك)")
+    bad = [x for x in cfg.get("home", []) if x not in HOME]
+    if bad:
+        fail(f"home: الأقسام دي مش معروفة: {', '.join(bad)} — المتاح: {', '.join(HOME)}")
     return cfg
+
+
+def check_types(cfg):
+    """types: أنواع المحتوى (درس، خطبة، تلاوة… أو أنواع خاصة بالمسجد)."""
+    types = cfg.get("types")
+    if types is None:
+        return
+    if not types:
+        fail("types: لازم يبقى فيه نوع واحد على الأقل (أو امسح types خالص علشان ترجع الأنواع الأساسية)")
+    seen = set()
+    for t in types:
+        k = t.get("key", "")
+        if not re.fullmatch(r"[a-z][a-z0-9_-]*", k):
+            fail(f"types: المفتاح «{k}» لازم يبقى بحروف إنجليزي صغيرة (مثلًا lecture)")
+        if k in seen:
+            fail(f"types: النوع «{k}» متكرر")
+        seen.add(k)
+        if k not in BUILTIN_TYPES and not (t.get("name") and t.get("plural")):
+            fail(f"types: النوع الجديد «{k}» محتاج name (اسم المقطع الواحد، زي «محاضرة») و plural (اسم القسم، زي «المحاضرات»)")
+
+
+def types_of(cfg):
+    """[(المفتاح، كلمات التعرّف)] بالترتيب، والنوع الافتراضي (اللي بياخده أي مقطع ملوش كلمة)."""
+    words = cfg.get("kinds") or {}
+    types = cfg.get("types") or [{"key": k} for k in ("tilawa", "lesson", "khutba", "other")]
+    if not cfg.get("types") and not words:
+        words = {"khutba": ["خطبة"], "tilawa": ["تلاوة"], "other": ["أذان"]}
+    keys = [t["key"] for t in types]
+    default = next((t["key"] for t in types if t.get("default")), "lesson" if "lesson" in keys else keys[0])
+    return [(t["key"], list(t.get("words", [])) + list(words.get(t["key"], []))) for t in types], default
 
 
 def main():
     cfg = load_config()
-    print(f"✓ site.config.json سليم: {cfg['name']} — t.me/{cfg['telegramChannel']} — اللغات {', '.join(cfg['i18n']['locales'])}")
+    ch = f"t.me/{cfg['telegramChannel']}" if cfg["telegramChannel"] else "من غير قناة تليجرام"
+    print(f"✓ site.config.json سليم: {cfg['name']} — {ch} — اللغات {', '.join(cfg['i18n']['locales'])}")
     return cfg
 
 

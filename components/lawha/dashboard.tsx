@@ -14,6 +14,8 @@ import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Link } from "@/i18n/navigation";
+import { gregorianToHijri, hijriToGregorian, parseGregorian, parseHijri, toHijriText, toIso, today } from "@/lib/dates";
+import { CALENDAR, DEFAULT_TYPE, SITE_ID_START, TYPE_KEYS, TYPES } from "@/lib/site-shared";
 import type { Kind, Lesson, Overrides } from "@/lib/storage/types";
 import { norm } from "@/lib/text";
 import { cn } from "@/lib/utils";
@@ -32,7 +34,8 @@ type State = {
   overrides: Overrides;
 };
 type Eff = Lesson & { series: string; hidden: boolean; isNew: boolean; edited: boolean };
-const KINDS: Kind[] = ["lesson", "khutba", "tilawa", "other"];
+/** The content types from site.config.json. */
+const KINDS: Kind[] = TYPE_KEYS;
 const MAX = 300 * 1024 * 1024;
 
 function fmtDur(sec: number) {
@@ -100,10 +103,10 @@ export function Dashboard({ logo }: { logo: React.ReactNode }) {
 
   const eff = useCallback(
     (id: number): Eff => {
-      const base = data!.lessons[id] ?? (ov!.add[id] as Lesson | undefined) ?? ({ t: "", s: "", k: "lesson", d: "", h: "", p: 0 } as Lesson);
+      const base = data!.lessons[id] ?? (ov!.add[id] as Lesson | undefined) ?? ({ t: "", s: "", k: DEFAULT_TYPE, d: "", h: "", p: 0 } as Lesson);
       const e = ov!.edit[id] ?? {};
       const L: Eff = { ...base, series: "", hidden: !!e.hidden, isNew: !!ov!.add[id] && !data!.lessons[id], edited: !!ov!.edit[id] };
-      for (const f of ["t", "s", "k", "h"] as const) if (e[f]) (L as Record<string, unknown>)[f] = e[f];
+      for (const f of ["t", "s", "k", "h", "g"] as const) if (e[f]) (L as Record<string, unknown>)[f] = e[f];
       L.series = e.series !== undefined ? `${e.series}|${e.sec ?? ""}` : ov!.add[id] ? `${ov!.add[id].series ?? ""}|${ov!.add[id].sec ?? ""}` : (data!.seriesOf[id] ?? "");
       if (L.series === "|") L.series = "";
       return L;
@@ -323,52 +326,59 @@ function StatusView(c: Ctx) {
       <i className="truncate text-xs text-muted-foreground not-italic">{note}</i>
     </div>
   );
-  const tgLink = (id: number) => (
-    <a className="inline-flex h-8 items-center gap-1 rounded-lg border px-2.5 text-sm hover:bg-muted" href={`https://t.me/${data.channel}/${id}`} target="_blank" rel="noopener">
-      <ExternalLink className="size-4" />
-      {t("open")}
-    </a>
-  );
+  // a link to the post, only for clips that came from the channel
+  const tgLink = (id: number) =>
+    data.channel && id < SITE_ID_START ? (
+      <a className="inline-flex h-8 items-center gap-1 rounded-lg border px-2.5 text-sm hover:bg-muted" href={`https://t.me/${data.channel}/${id}`} target="_blank" rel="noopener">
+        <ExternalLink className="size-4" />
+        {t("open")}
+      </a>
+    ) : null;
 
   return (
     <>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {stat(t("lastOnSite"), lastSite, eff(lastSite).t)}
-        {stat(t("lastOnChannel"), chan ? chan.last || "؟" : "…", chan ? (chan.found.length ? new Date(chan.found.at(-1)!.date).toLocaleDateString(c.locale) : t("nothingNew")) : t("searching"))}
-        {stat(t("notOnSite"), newOnes ? newOnes.length : "…", t("newPosts"), !!newOnes?.length)}
+        {data.channel ? stat(t("lastOnChannel"), chan ? chan.last || "؟" : "…", chan ? (chan.found.length ? new Date(chan.found.at(-1)!.date).toLocaleDateString(c.locale) : t("nothingNew")) : t("searching")) : null}
+        {data.channel ? stat(t("notOnSite"), newOnes ? newOnes.length : "…", t("newPosts"), !!newOnes?.length) : null}
         {stat(t("noAudio"), missing.length, t("telegramOnlyNote"), !!missing.length)}
       </div>
 
-      <H2
-        extra={
-          <Button variant="outline" size="sm" onClick={scan} className="gap-1.5">
-            <RefreshCw className="size-4" />
-            {t("refresh")}
-          </Button>
-        }
-      >
-        {t("notOnSite")}
-      </H2>
-      <p className="mb-2 text-sm text-muted-foreground">{t("notOnSiteHint")}</p>
-      <Card>
-        {newOnes === null ? (
-          <p className="py-6 text-center text-muted-foreground">{t("searching")}</p>
-        ) : newOnes.length ? (
-          newOnes.map((x) => (
-            <Row key={x.id} id={x.id} title={t("message", { id: x.id })} sub={fmtDate(x.date)}>
-              {tgLink(x.id)}
-              <Button size="sm" onClick={() => (sessionStorage.setItem("lawha:add", String(x.id)), c.setTab("add"))}>
-                {t("addIt")}
+      {/* posts on the channel that aren't on the site yet (only with a Telegram channel) */}
+      {data.channel ? (
+        <>
+          <H2
+            extra={
+              <Button variant="outline" size="sm" onClick={scan} className="gap-1.5">
+                <RefreshCw className="size-4" />
+                {t("refresh")}
               </Button>
-              <Button size="sm" variant="destructive" onClick={() => setOv((o) => ({ ...o, ignore: [...o.ignore, x.id] }))}>
-                {t("ignore")}
-              </Button>
-            </Row>
-          ))
-        ) : (
-          <p className="py-6 text-center text-muted-foreground">{t("allOnSite")}</p>
-        )}
-      </Card>
+            }
+          >
+            {t("notOnSite")}
+          </H2>
+          <p className="mb-2 text-sm text-muted-foreground">{t("notOnSiteHint")}</p>
+          <Card>
+            {newOnes === null ? (
+              <p className="py-6 text-center text-muted-foreground">{t("searching")}</p>
+            ) : newOnes.length ? (
+              newOnes.map((x) => (
+                <Row key={x.id} id={x.id} title={t("message", { id: x.id })} sub={fmtDate(x.date)}>
+                  {tgLink(x.id)}
+                  <Button size="sm" onClick={() => (sessionStorage.setItem("lawha:add", String(x.id)), c.setTab("add"))}>
+                    {t("addIt")}
+                  </Button>
+                  <Button size="sm" variant="destructive" onClick={() => setOv((o) => ({ ...o, ignore: [...o.ignore, x.id] }))}>
+                    {t("ignore")}
+                  </Button>
+                </Row>
+              ))
+            ) : (
+              <p className="py-6 text-center text-muted-foreground">{t("allOnSite")}</p>
+            )}
+          </Card>
+        </>
+      ) : null}
 
       <H2 extra={<small className="text-muted-foreground">{missing.length}</small>}>{t("noAudio")}</H2>
       <p className="mb-2 text-sm text-muted-foreground">{t("noAudioHint")}</p>
@@ -405,6 +415,44 @@ function StatusView(c: Ctx) {
       {upFor !== null ? <UploadDialog {...c} id={upFor} onClose={() => setUpFor(null)} /> : null}
     </>
   );
+}
+
+/**
+ * The date of a recording, in the calendar the mosque chose (site.config.json → dates).
+ * Both dates are kept in step, so switching the calendar later still has every date.
+ */
+function DateField({ t, h, g, onChange }: { t: Ctx["t"]; h: string; g: string; onChange: (d: { h: string; g: string }) => void }) {
+  if (CALENDAR === "none") return null;
+  const gValue = g || (parseHijri(h) ? toIso(hijriToGregorian(parseHijri(h)!)) : "");
+  const setG = (x: string) => {
+    const p = parseGregorian(x);
+    onChange({ g: x, h: p ? toHijriText(gregorianToHijri(p)) : h });
+  };
+  const setH = (x: string) => {
+    const p = parseHijri(x);
+    onChange({ h: x, g: p ? toIso(hijriToGregorian(p)) : g });
+  };
+  const hijri = (
+    <label className={field}>
+      {t("fieldDate")}
+      <input className={control} value={h} inputMode="numeric" placeholder="7-6-1448" onChange={(e) => setH(e.target.value)} />
+    </label>
+  );
+  const greg = (
+    <label className={field}>
+      {t("fieldDateG")}
+      <input className={control} type="date" value={gValue} onChange={(e) => setG(e.target.value)} />
+    </label>
+  );
+  if (CALENDAR === "gregorian") return greg;
+  if (CALENDAR === "both")
+    return (
+      <>
+        {greg}
+        {hijri}
+      </>
+    );
+  return hijri;
 }
 
 function FilePick({ t, file, onPick }: { t: Ctx["t"]; file?: File; onPick: (f: File) => void }) {
@@ -464,9 +512,7 @@ function ListView(c: Ctx) {
   );
   const chips: [string, string][] = [
     ["", t("filterAll")],
-    ["tilawa", c.tk("tilawa")],
-    ["lesson", c.tk("lesson")],
-    ["khutba", c.tk("khutba")],
+    ...TYPES.filter((x) => x.menu).map((x): [string, string] => [x.key, c.tk(x.key)]),
     ["ed", t("filterEdited")],
     ["hid", t("filterHidden")],
   ];
@@ -525,16 +571,16 @@ const Tag = ({ tone, children }: { tone: "new" | "ed" | "hid"; children: React.R
 function EditDialog(c: Ctx & { id: number; onClose: () => void }) {
   const { t, id, eff, data, ov, setOv } = c;
   const L = eff(id);
-  const [v, setV] = useState({ t: L.t, s: L.s, k: L.k, h: L.h, series: L.series, hidden: L.hidden, featured: ov.featured.includes(id) });
+  const [v, setV] = useState({ t: L.t, s: L.s, k: L.k, h: L.h, g: L.g ?? "", series: L.series, hidden: L.hidden, featured: ov.featured.includes(id) });
   const save = () => {
     setOv((o) => {
       const n: Overrides = { ...o, edit: { ...o.edit }, add: { ...o.add }, featured: o.featured.filter((x) => x !== id) };
       const [series, sec] = v.series.split("|");
-      if (n.add[id] && !data.lessons[id]) n.add[id] = { ...n.add[id], t: v.t, s: v.s, k: v.k, h: v.h, series: series ?? "", sec: sec ?? "" };
+      if (n.add[id] && !data.lessons[id]) n.add[id] = { ...n.add[id], t: v.t, s: v.s, k: v.k, h: v.h, ...(v.g ? { g: v.g } : {}), series: series ?? "", sec: sec ?? "" };
       else {
         const orig = { ...data.lessons[id], series: data.seriesOf[id] ?? "" };
         const e: Overrides["edit"][string] = {};
-        for (const f of ["t", "s", "k", "h"] as const) if (v[f] && v[f] !== orig[f]) (e as Record<string, unknown>)[f] = v[f];
+        for (const f of ["t", "s", "k", "h", "g"] as const) if (v[f] && v[f] !== (orig[f] ?? "")) (e as Record<string, unknown>)[f] = v[f];
         if (v.series !== orig.series) {
           e.series = series ?? "";
           e.sec = sec ?? "";
@@ -583,10 +629,7 @@ function EditDialog(c: Ctx & { id: number; onClose: () => void }) {
                 ))}
               </select>
             </label>
-            <label className={field}>
-              {t("fieldDate")}
-              <input className={control} value={v.h} inputMode="numeric" placeholder="7-6-1448" onChange={(e) => setV({ ...v, h: e.target.value })} />
-            </label>
+            <DateField t={t} h={v.h} g={v.g} onChange={(d) => setV({ ...v, ...d })} />
             <label className={field}>
               {t("fieldSeries")}
               <select className={control} value={v.series} onChange={(e) => setV({ ...v, series: e.target.value })}>
@@ -615,10 +658,14 @@ function EditDialog(c: Ctx & { id: number; onClose: () => void }) {
           </label>
         </div>
         <DialogFooter className="gap-2 sm:justify-between">
-          <a className="inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-sm hover:bg-muted" href={`https://t.me/${data.channel}/${id}`} target="_blank" rel="noopener">
-            <Send className="size-4 rtl:-scale-x-100" />
-            Telegram
-          </a>
+          {data.channel && id < SITE_ID_START ? (
+            <a className="inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-sm hover:bg-muted" href={`https://t.me/${data.channel}/${id}`} target="_blank" rel="noopener">
+              <Send className="size-4 rtl:-scale-x-100" />
+              Telegram
+            </a>
+          ) : (
+            <span />
+          )}
           <div className="flex gap-2">
             {ov.edit[id] ? (
               <Button
@@ -657,7 +704,7 @@ function AddView(c: Ctx) {
       return "";
     }
   });
-  const [v, setV] = useState({ id: prefill, k: "lesson" as Kind, t: "", s: data.sheikhs[0]?.key ?? "", h: "", series: "" });
+  const [v, setV] = useState(() => ({ id: prefill, k: DEFAULT_TYPE as Kind, t: "", s: data.sheikhs[0]?.key ?? "", ...today(), series: "" }));
   const [file, setFile] = useState<File>();
   const [err, setErr] = useState("");
   const add = async () => {
@@ -668,9 +715,9 @@ function AddView(c: Ctx) {
     if (!v.t.trim()) return setErr(t("errTitle"));
     const d = await durationOf(file);
     const [series, sec] = v.series.split("|");
-    setOv((o) => ({ ...o, add: { ...o.add, [v.id]: { t: v.t.trim(), s: v.s, k: v.k, h: v.h.trim(), d, p: 1, series: series ?? "", sec: sec ?? "" } } }));
+    setOv((o) => ({ ...o, add: { ...o.add, [v.id]: { t: v.t.trim(), s: v.s, k: v.k, h: v.h.trim(), ...(v.g ? { g: v.g } : {}), d, p: 1, series: series ?? "", sec: sec ?? "" } } }));
     setFiles((f) => ({ ...f, [Number(v.id)]: file }));
-    setV({ ...v, id: "", t: "", h: "" });
+    setV({ ...v, id: "", t: "", ...today() });
     setFile(undefined);
     setErr("");
     toast(t("addedHint"));
@@ -713,10 +760,7 @@ function AddView(c: Ctx) {
               ))}
             </select>
           </label>
-          <label className={field}>
-            {t("fieldDate")}
-            <input className={control} inputMode="numeric" placeholder="7-6-1448" value={v.h} onChange={(e) => setV({ ...v, h: e.target.value })} />
-          </label>
+          <DateField t={t} h={v.h} g={v.g} onChange={(d) => setV({ ...v, ...d })} />
         </div>
         <label className={field}>
           {t("fieldSeries")}

@@ -51,10 +51,12 @@ export function LessonActions({ item }: { item: Item }) {
         </>
       ) : null}
       <ShareButton path={`/l/${item.id}`} title={item.t} className="h-11 px-4" />
-      <a href={p.telegramUrl(item.id)} target="_blank" rel="noopener" className={btn}>
-        <Send className="size-5 text-primary rtl:-scale-x-100" />
-        {t("telegram")}
-      </a>
+      {p.telegramUrl(item.id) ? (
+        <a href={p.telegramUrl(item.id)} target="_blank" rel="noopener" className={btn}>
+          <Send className="size-5 text-primary rtl:-scale-x-100" />
+          {t("telegram")}
+        </a>
+      ) : null}
     </div>
   );
 }

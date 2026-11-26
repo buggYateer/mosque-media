@@ -33,13 +33,31 @@ const sheikhSchema = z.object({
   slug: z.string().optional(),
 });
 
+/** The same text in every language, or one per language: "درس" or {"ar": "درس", "en": "Lesson"}. */
+const textSchema = z.union([z.string().min(1), z.partialRecord(z.enum(LOCALES), z.string().min(1))]);
+
+const typeSchema = z.object({
+  key: z.string().regex(/^[a-z][a-z0-9_-]*$/, "A type key uses small English letters, numbers, - or _ (for example: lecture)"),
+  name: textSchema.optional(),
+  plural: textSchema.optional(),
+  icon: z.string().optional(),
+  words: z.array(z.string()).default([]),
+  menu: z.boolean().optional(),
+  surahs: z.boolean().optional(),
+  default: z.boolean().optional(),
+});
+
 const configSchema = z
   .object({
     name: z.string().min(1),
     shortName: z.string().optional(),
     description: z.string().optional(),
     domain: z.string().default(""),
-    telegramChannel: z.string().min(1).transform((s) => s.replace(/^@|^https:\/\/t\.me\//g, "").replace(/\/$/, "")),
+    /** Optional: the site works without a Telegram channel. */
+    telegramChannel: z
+      .string()
+      .default("")
+      .transform((s) => s.replace(/^@|^https:\/\/t\.me\//g, "").replace(/\/$/, "").trim()),
     githubRepo: z.string().min(3),
     audioBase: z.string().default(""),
     colors: z.object({
@@ -72,7 +90,28 @@ const configSchema = z
       })
       .default({ data: { provider: "github-json" }, audio: { provider: "github-releases" } }),
     sheikhs: z.array(sheikhSchema),
+    /** Old way to set the words of the built-in types (still read). New sites use `types`. */
     kinds: z.record(z.string(), z.array(z.string())).default({}),
+    /** The content types (lesson, sermon, recitation… or your own). Leave it out to keep the built-in ones. */
+    types: z
+      .array(typeSchema)
+      .optional()
+      .refine((t) => !t || new Set(t.map((x) => x.key)).size === t.length, { message: "Two types have the same key" })
+      .refine((t) => !t || t.every((x) => ["lesson", "khutba", "tilawa", "other"].includes(x.key) || (x.name && x.plural)), {
+        message: "A new type needs a name (one item) and a plural (the section title)",
+      })
+      .refine((t) => !t || t.length > 0, { message: "Add at least one type" }),
+    /** How dates show on the site. */
+    dates: z
+      .object({
+        calendar: z.enum(["hijri", "gregorian", "both", "none"]).default("hijri"),
+        hijriOffset: z.number().int().min(-2).max(2).default(0),
+      })
+      .default({ calendar: "hijri", hijriOffset: 0 }),
+    /** Which home sections show, in this order. */
+    home: z.array(z.enum(["categories", "feature", "latestTilawat", "featured", "weekly", "latest", "popular", "series", "others"])).optional(),
+    /** Change any wording of the site, per language: {"ar": {"common.sheikh": "الأستاذ"}}. Keys are in messages/<language>.json. */
+    texts: z.partialRecord(z.enum(LOCALES), z.record(z.string(), z.string())).default({}),
     /** Words before a sheikh's name in captions, per language (used by tools/build_data.py). */
     sheikhPrefixes: z.array(z.string()).default(["الشيخ", "ش", "Sheikh", "Shaykh", "مولانا", "Шейх"]),
     collections: z

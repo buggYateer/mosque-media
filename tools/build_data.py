@@ -22,7 +22,7 @@ SITE = Path(__file__).resolve().parent.parent
 DATA = SITE / "data"
 AUDIO = DATA / "audio"
 sys.path.insert(0, str(SITE / "tools"))
-from apply_config import load_config  # noqa: E402
+from apply_config import load_config, types_of  # noqa: E402
 
 
 def read_json(p, default):
@@ -56,6 +56,12 @@ def to_hijri(dt):
     return f"{hd}-{hm}-{hy}"
 
 
+def to_hijri_adjusted(dt):
+    """الهجري مع فرق الأيام اللي المسجد حدده (site.config.json → dates.hijriOffset)."""
+    from datetime import timedelta
+    return to_hijri(dt + timedelta(days=HIJRI_OFFSET))
+
+
 def hijri_of(m, text):
     for s in (m.get("file", ""), m.get("title", ""), text):
         r = re.search(r"(\d{1,2})-(\d{1,2})-(14\d\d)", s or "")
@@ -63,7 +69,7 @@ def hijri_of(m, text):
             return f"{int(r.group(1))}-{int(r.group(2))}-{r.group(3)}"
     if m.get("date"):
         try:
-            return to_hijri(datetime.fromisoformat(m["date"][:19]))
+            return to_hijri_adjusted(datetime.fromisoformat(m["date"][:19]))
         except ValueError:
             pass
     return ""
@@ -85,15 +91,33 @@ def title_of(m, text):
 
 
 CFG = load_config()
-KINDS = CFG.get("kinds") or {"khutba": ["خطبة"], "tilawa": ["تلاوة"], "other": ["أذان"]}
+HIJRI_OFFSET = CFG.get("dates", {}).get("hijriOffset", 0)
+# أنواع المحتوى من site.config.json → types (أو الأساسية: تلاوة، درس، خطبة، متفرقات)
+TYPES, DEFAULT_TYPE = types_of(CFG)
 
 
 def kind_of(m, text):
     s = norm(text + " " + m.get("file", "") + " " + m.get("title", ""))
-    for k in ("khutba", "tilawa", "other"):
-        if any(norm(w) in s for w in KINDS.get(k, [])):
+    for k, words in TYPES:
+        if k != DEFAULT_TYPE and any(norm(w) in s for w in words):
             return k
-    return "lesson"
+    return DEFAULT_TYPE
+
+
+BUILTIN_LABELS = {"lesson": "دروس", "khutba": "خطب", "tilawa": "تلاوات", "other": "أخرى"}
+
+
+def type_label(k):
+    """اسم النوع للرسايل اللي بتطلع في الشاشة."""
+    t = next((x for x in CFG.get("types") or [] if x.get("key") == k), {})
+    p = t.get("plural")
+    return (p if isinstance(p, str) else (p or {}).get("ar") or next(iter((p or {}).values()), None)) or BUILTIN_LABELS.get(k, k)
+
+
+def gregorian_of(m):
+    """تاريخ النشر الميلادي «yyyy-mm-dd» (من التليجرام)."""
+    d = (m.get("date") or "")[:10]
+    return d if re.fullmatch(r"\d{4}-\d{2}-\d{2}", d) else ""
 
 
 SHEIKHS = CFG["sheikhs"]
@@ -168,6 +192,7 @@ def main():
             "k": m.get("kind") or kind_of(m, text),
             "d": m.get("dur", ""),
             "h": hijri_of(m, text),
+            **({"g": gregorian_of(m)} if gregorian_of(m) else {}),
             "p": max(local, int(uploaded.get(str(m["id"]), 0)), 1 if m.get("demo") else 0),
         }
         if str(m["id"]) in views:
@@ -203,7 +228,7 @@ def main():
             ids = resolve(sec.get("ids"), sec.get("match"))
             for i in ids:
                 n += 1
-                lessons[i]["k"] = "lesson"
+                lessons[i]["k"] = DEFAULT_TYPE
                 if s.get("numbered"):
                     lessons[i]["n"] = n
                 in_series.add(i)
@@ -221,13 +246,13 @@ def main():
         L["s"] = key
         sh = sheikhs.setdefault(key, blank(key))
         if i not in in_series and i not in in_coll:
-            sh[L["k"]].append(i)
+            sh.setdefault(L["k"], []).append(i)
     for key, ser in series_by_sheikh.items():
         sheikhs.setdefault(key, blank(key))["series"] = ser
 
     conf = {sh["key"]: sh for sh in SHEIKHS}
     order = [sh["key"] for sh in SHEIKHS]
-    total = lambda sh: sum(len(sh[k]) for k in ("lesson", "khutba", "tilawa", "other")) + sum(len(x["ids"]) for se in sh.get("series", []) for x in se["sections"])
+    total = lambda sh: sum(len(v) for v in sh.values() if isinstance(v, list) and v and isinstance(v[0], int)) + sum(len(x["ids"]) for se in sh.get("series", []) for x in se["sections"])
     out_sheikhs, used = [], set()
     for sh in sheikhs.values():
         c = conf.get(sh["key"], {})
@@ -259,7 +284,8 @@ def main():
 
     print(f"✓ lessons.json: {len(lessons)} مقطع | في سلاسل: {len(in_series)} | مشايخ: {len(out_sheikhs)}")
     for sh in out_sheikhs:
-        print(f"   {sh['name']}: سلاسل {len(sh.get('series', []))} · دروس {len(sh['lesson'])} · خطب {len(sh['khutba'])} · تلاوات {len(sh['tilawa'])} · أخرى {len(sh['other'])}")
+        counts = " · ".join(f"{type_label(k)} {len(sh.get(k, []))}" for k, _ in TYPES)
+        print(f"   {sh['name']}: سلاسل {len(sh.get('series', []))} · {counts}")
     unknown = [i for i in lessons if lessons[i]["s"] == "غير_محدد"]
     if unknown:
         print(f"   ⚠ {len(unknown)} مقطع من غير شيخ معروف (مثلًا {unknown[:5]}) — ضيف اسم الشيخ أو اسمه المختصر في site.config.json أو عدّلهم من الداشبورد")

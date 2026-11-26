@@ -52,6 +52,8 @@ def api(tok, method, **params):
 def main():
     cfg = load_config()
     ch = cfg["telegramChannel"].lower()
+    if not ch:
+        sys.exit("✗ مفيش قناة تليجرام في site.config.json (telegramChannel) — البوت محتاج قناة.")
     tok = token()
     me = api(tok, "getMe")
     if not me.get("ok"):

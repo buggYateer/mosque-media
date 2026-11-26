@@ -1,4 +1,5 @@
-import { AudioLines, BookOpen, BookText, Mic } from "lucide-react";
+import { BookOpen } from "lucide-react";
+import { TypeIcon } from "./icons";
 import type { Kind } from "@/lib/storage/types";
 import { cn } from "@/lib/utils";
 
@@ -6,7 +7,6 @@ import { cn } from "@/lib/utils";
 export const TONE_BG = ["bg-tone-1", "bg-tone-2", "bg-tone-3", "bg-tone-4", "bg-tone-5", "bg-tone-6"];
 export const toneBg = (tone = 1) => TONE_BG[(tone - 1) % TONE_BG.length];
 
-export const KIND_ICON = { lesson: BookText, khutba: Mic, tilawa: AudioLines, other: BookOpen } as const;
 
 /**
  * A cover drawn in code (no image files): the sheikh's color, an icon, a small tag and the title.
@@ -30,10 +30,9 @@ export function Cover({
   byline?: string;
   className?: string;
 }) {
-  const Icon = kind === "series" ? BookOpen : KIND_ICON[kind ?? "lesson"];
   return (
     <div aria-hidden data-tone={tone ?? 1} data-pat={Math.abs(pat) % 5} className={cn("mm-cover @container relative flex aspect-video items-end overflow-hidden p-4 text-white", toneBg(tone), className)}>
-      <Icon className="mm-cover-icon absolute top-3 end-3 size-8 opacity-55" />
+      {kind === "series" ? <BookOpen className="mm-cover-icon absolute top-3 end-3 size-8 opacity-55" /> : <TypeIcon kind={kind ?? ""} className="mm-cover-icon absolute top-3 end-3 size-8 opacity-55" />}
       {/* Empty by default; a theme can show the mosque logo here. */}
       <span className="mm-cover-logo" />
       <div className="mm-cover-text flex max-w-[88%] flex-col leading-snug">

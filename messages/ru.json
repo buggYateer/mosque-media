@@ -262,6 +262,7 @@
     "fieldSheikh": "Шейх",
     "fieldKind": "Тип",
     "fieldDate": "Дата по хиджре (день-месяц-год)",
+    "fieldDateG": "Дата (григорианская)",
     "fieldSeries": "Цикл",
     "noSeries": "— Без цикла —",
     "hidden": "Скрыть с сайта",

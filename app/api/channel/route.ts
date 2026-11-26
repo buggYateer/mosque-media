@@ -20,8 +20,8 @@ async function probe(id: number) {
 
 export async function GET(req: NextRequest) {
   const from = Math.max(0, parseInt(req.nextUrl.searchParams.get("from") ?? "0", 10) || 0);
-  // Demo data uses a placeholder channel name: never probe a real stranger's channel.
-  if ((await getSite()).demo) return Response.json({ from, last: from, found: [] });
+  // No channel set, or demo data (a placeholder channel name: never probe a real stranger's channel).
+  if (!config.telegramChannel || (await getSite()).demo) return Response.json({ from, last: from, found: [] });
   const found: { id: number; date: string }[] = [];
   let id = from + 1,
     misses = 0,
