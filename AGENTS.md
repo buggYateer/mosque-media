@@ -32,7 +32,7 @@ Ask, one or two questions at a time:
 Offer **3 distinct style suggestions** and let the user pick. Also ask which **languages** the site should have (`i18n.default` and `i18n.locales`: ar, en, ur, hi, ru). Then write `site.config.json` directly. `tools/setup.py` is interactive, so it's meant for users running it themselves. Run `python tools/apply_config.py` to validate, then show the result in the preview on desktop, on mobile, and in dark mode. Adjust components (`components/`) only if they want more than the config offers.
 
 ### 4. Import the channel
-Guide them through Telegram Desktop: open the channel → ⋮ → **Export chat history**. Tick only **Audio files** (plus Voice messages if they use them), set the size limit to the maximum, and choose format **Machine-readable JSON**. Then run:
+Guide them through Telegram Desktop: open the channel → ⋮ → **Export chat history**. Tick **Audio files** (plus Voice messages if they use them, and **Video files** if the channel has video lessons), set the size limit to the maximum, and choose format **Machine-readable JSON**. Videos land in `data/video/` and `update_site.py` uploads them as `<id>.mp4` (ffmpeg converts other formats); videos over `media.maxUploadMB` stay Telegram-only — suggest YouTube for those and adding the link from the dashboard. Then run:
 ```
 python tools/import_telegram_export.py "<export folder>"
 python tools/build_data.py
@@ -71,7 +71,7 @@ python tools/update_site.py --export "<new export folder>"
 
 ## Troubleshooting
 - **Port in use:** run `pnpm dev -p 3001`.
-- **Checks:** `pnpm lint`, `pnpm typecheck`, `pnpm test` (storage tests + build + Playwright).
+- **Checks:** `pnpm lint`, `pnpm typecheck`, `pnpm test` (storage and content tests + build + Playwright).
 - **`site.config.json` error:** the message gives the line number. Look for a missing or extra comma or quote.
 - **Clip shows only a Telegram button:** its audio wasn't in the export, or hasn't been uploaded yet.
 - **Dashboard says "not configured":** an environment variable is missing in Vercel, or the site wasn't redeployed.

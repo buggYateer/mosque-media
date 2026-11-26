@@ -146,6 +146,11 @@ def sheikh_of(m, text):
     return ""
 
 
+def video_file(i):
+    """ملف الفيديو المحلي للمقطع (data/video/<id>.*) أو None."""
+    return next((f for f in (DATA / "video").glob(f"{i}.*")), None)
+
+
 def audio_parts(i):
     """ملفات الصوت المحلية للمقطع: data/audio/<id>.mp3 أو <id>_1.mp3, <id>_2.mp3 ..."""
     one = [f for f in AUDIO.glob(f"{i}.*") if f.suffix.lower() in (".mp3", ".m4a", ".ogg", ".oga", ".opus", ".wav", ".aac")]
@@ -178,6 +183,7 @@ def main():
     if not msgs:
         print("مفيش مقاطع في data/messages.json — استورد القناة الأول (شوف الدليل).")
     uploaded = read_json(DATA / "uploaded.json", {})
+    uploaded_video = read_json(DATA / "uploaded_video.json", {})
     views = read_json(DATA / "views.json", {})
     series_def = read_json(DATA / "series.json", {}).get("series", [])
 
@@ -198,6 +204,8 @@ def main():
         # فيديو (لينك يوتيوب/فيسبوك/درايف/مباشر، أو "file" لملف مرفوع) وصوت متخزّن في مكان تاني (لينك مباشر)
         if m.get("video"):
             L["vid"] = m["video"]
+        elif m.get("media") == "video" and (video_file(m["id"]) or str(m["id"]) in uploaded_video):
+            L["vid"] = "file"  # فيديو من التليجرام: data/video/<id>.* ← بيترفع كـ <id>.mp4
         if m.get("audioLink"):
             L["au"] = m["audioLink"]
         if str(m["id"]) in views:
@@ -294,7 +302,7 @@ def main():
     unknown = [i for i in lessons if lessons[i]["s"] == "غير_محدد"]
     if unknown:
         print(f"   ⚠ {len(unknown)} مقطع من غير شيخ معروف (مثلًا {unknown[:5]}) — ضيف اسم الشيخ أو اسمه المختصر في site.config.json أو عدّلهم من الداشبورد")
-    noaudio = [i for i in lessons if not lessons[i]["p"]]
+    noaudio = [i for i in lessons if not lessons[i]["p"] and not lessons[i].get("vid") and not lessons[i].get("au")]
     if noaudio:
         print(f"   ⚠ {len(noaudio)} مقطع ملوش ملف صوت (هيظهر بزرار تليجرام بس): {noaudio[:8]}")
 

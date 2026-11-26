@@ -5,7 +5,7 @@
 بيعمل:
 1) git pull (علشان ميكتبش فوق تعديلات الداشبورد)
 2) يتأكد من الإعدادات، يستورد الجديد، يجيب المشاهدات، ويبني content/lessons.json
-3) يرفع ملفات الصوت الجديدة بس (GitHub Releases، أو S3/R2 لو اخترته في site.config.json)
+3) يرفع ملفات الصوت والفيديو الجديدة بس (GitHub Releases، أو S3/R2 لو اخترته في site.config.json)
 4) لو البيانات في قاعدة بيانات: pnpm data:sync
 5) commit + push ← Vercel ينشر الموقع لوحده خلال دقيقة
 اختيارات زيادة: --dry (يوري هيعمل إيه بس) | --no-push (يرفع الصوت ويبني من غير نشر)"""
@@ -26,10 +26,11 @@ SITE = Path(__file__).resolve().parent.parent
 DATA = SITE / "data"
 sys.path.insert(0, str(SITE / "tools"))
 from apply_config import load_config  # noqa: E402
-from build_data import audio_parts  # noqa: E402
+from build_data import audio_parts, video_file  # noqa: E402
 
 DRY = "--dry" in sys.argv
 UPLOADED = DATA / "uploaded.json"
+UPLOADED_VIDEO = DATA / "uploaded_video.json"
 PY = sys.executable
 
 
@@ -54,6 +55,17 @@ def to_mp3(src: Path, dst: Path):
         shutil.copyfile(src, dst)
     else:
         subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(src), "-vn", "-c:a", "libmp3lame", "-b:a", "64k", str(dst)], check=True)
+
+
+def to_mp4(src: Path, dst: Path):
+    """mp4 يبدأ يشتغل قبل ما يتحمّل كله (faststart)؛ بيعيد التحويل بس لو الصيغة محتاجة."""
+    if not shutil.which("ffmpeg"):
+        if src.suffix.lower() != ".mp4":
+            sys.exit(f"✗ الفيديو {src.name} محتاج يتحوّل لـ mp4 — سطّب ffmpeg (winget install Gyan.FFmpeg) وشغّل تاني")
+        return shutil.copyfile(src, dst)
+    r = subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(src), "-c", "copy", "-movflags", "+faststart", str(dst)])
+    if r.returncode:
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(src), "-c:v", "libx264", "-preset", "veryfast", "-crf", "26", "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", str(dst)], check=True)
 
 
 def s3_client():
@@ -94,11 +106,13 @@ def main():
     tool("build_data.py")
 
     done = {str(k): v for k, v in (json.loads(UPLOADED.read_text(encoding="utf-8")) if UPLOADED.exists() else {}).items()}
+    done_video = json.loads(UPLOADED_VIDEO.read_text(encoding="utf-8")) if UPLOADED_VIDEO.exists() else {}
     todo = [m["id"] for m in msgs if str(m["id"]) not in done and audio_parts(m["id"])]
-    print(f"ملفات صوت جديدة للرفع: {len(todo)} ← {audio_provider}")
-    s3 = s3_client() if todo and audio_provider == "s3" and not DRY else None
+    todo_video = [m["id"] for m in msgs if m.get("media") == "video" and str(m["id"]) not in done_video and video_file(m["id"])]
+    print(f"ملفات صوت جديدة للرفع: {len(todo)} | فيديو: {len(todo_video)} ← {audio_provider}")
+    s3 = s3_client() if (todo or todo_video) and audio_provider == "s3" and not DRY else None
     releases = set()
-    if todo and audio_provider == "github-releases":
+    if (todo or todo_video) and audio_provider == "github-releases":
         releases = set(run("gh", "release", "list", "-R", repo, "--limit", "200", "--json", "tagName", "-q", ".[].tagName", check=False).split())
     tmp = Path(tempfile.mkdtemp())
     try:
@@ -126,6 +140,25 @@ def main():
                 UPLOADED.write_text(json.dumps(done, indent=0), encoding="utf-8")
                 for f in files:
                     f.unlink(missing_ok=True)
+        for i in todo_video:
+            dst = tmp / f"{i}.mp4"
+            print(f"  🎬 {video_file(i).name} → {dst.name}")
+            if not DRY:
+                to_mp4(video_file(i), dst)
+            if audio_provider == "s3":
+                print(f"  ↑ s3://{os.environ.get('S3_BUCKET', '?')}/{dst.name}")
+                if s3:
+                    s3.upload_file(str(dst), os.environ["S3_BUCKET"], dst.name, ExtraArgs={"ContentType": "video/mp4"})
+            else:
+                tag = f"audio-{i // 500}"
+                if tag not in releases:
+                    run("gh", "release", "create", tag, "-R", repo, "--title", f"Audio {tag}", "--notes", f"Audio files of {cfg['name']}")
+                    releases.add(tag)
+                run("gh", "release", "upload", tag, str(dst), "-R", repo, "--clobber")
+            done_video[str(i)] = 1
+            if not DRY:
+                UPLOADED_VIDEO.write_text(json.dumps(done_video, indent=0), encoding="utf-8")
+                dst.unlink(missing_ok=True)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
@@ -134,6 +167,8 @@ def main():
     data = json.loads(p.read_text(encoding="utf-8"))
     for k, L in data["lessons"].items():
         L["p"] = int(done.get(k, 0))
+        if L.get("vid") == "file" and k not in done_video:
+            del L["vid"]  # الفيديو لسه مااترفعش
     if not DRY:
         p.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
 

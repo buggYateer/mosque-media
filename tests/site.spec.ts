@@ -14,6 +14,9 @@ test("every page answers and has a title", async ({ page }) => {
     await expect(page, r).toHaveTitle(/مسجد النور/);
   }
   expect((await page.goto("/no-such-page"))?.status()).toBe(404);
+  // the «misc» type has its page; «videos» appears only once the site has videos (the demo has none)
+  expect((await page.goto("/t/other"))?.status()).toBe(200);
+  expect((await page.goto("/videos"))?.status()).toBe(404);
   // Unknown ids of dynamic pages render the not-found page (streamed, so status 200) and are marked noindex.
   await page.goto("/l/999999");
   await expect(page.getByText("الصفحة دي مش موجودة.")).toBeVisible();

@@ -41,7 +41,7 @@ The assistant follows [AGENTS.md](AGENTS.md). It checks your tools, asks about y
 
 ## Features
 
-- **Video too.** Any recording can have a video: a YouTube, Facebook or Google Drive link, or a direct link to a video file. It plays on the recording's page (YouTube in privacy mode, loaded only when pressed), and a *Videos* section appears once there are any. Audio kept elsewhere can be linked as well.
+- **Video too.** Any recording can have a video: a YouTube, Facebook or Google Drive link, or a direct link to a video file. It plays on the recording's page (YouTube in privacy mode, loaded only when pressed), and a *Videos* section appears once there are any. Audio kept elsewhere can be linked as well. Video posts in a Telegram export are imported and uploaded too (up to `media.maxUploadMB`).
 - **Browse by sheikh, series and type.** Lessons, Friday sermons, recitations, latest uploads, most listened, and search.
 - **Built-in player.** Remembers where you stopped, offers playback speed, plays the next lesson automatically, and works from the lock screen. Downloads save with the Arabic lesson title.
 - **Automatic collections.** For example, every clip that mentions «رمضان» is grouped into *Ramadan Nights*.
@@ -104,7 +104,7 @@ Dashboard (/lawha) ──▶ content/overrides.json in GitHub  (or the database,
 
 1. **Preview the demo.** Run `pnpm install`, then `pnpm dev`, and open http://localhost:3000.
 2. **Configure.** Run `python tools/setup.py` (or edit `site.config.json` directly) and add your logo to `assets/`. The site reloads with your colors, font and languages.
-3. **Import your channel.** In Telegram Desktop, open the channel → ⋮ → *Export chat history* → Audio files, JSON. Then run:
+3. **Import your channel.** In Telegram Desktop, open the channel → ⋮ → *Export chat history* → Audio files (and Video files if the channel has video lessons), JSON. Then run:
    ```bash
    python tools/import_telegram_export.py "path/to/ChatExport_folder"
    ```
@@ -196,7 +196,7 @@ With a database, run `pnpm data:sync` once (the weekly update does it automatica
 ```bash
 pnpm dev            # local site at http://localhost:3000 (demo audio plays a short tone)
 pnpm build          # production build (prerenders every page)
-pnpm test           # storage tests + build + Playwright end-to-end tests
+pnpm test           # storage + content tests, build, Playwright end-to-end tests
 pnpm lint && pnpm typecheck
 ```
 

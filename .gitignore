@@ -1,5 +1,6 @@
 # ملفات الصوت على جهازك (بتترفع على GitHub Releases مش جوه المستودع)
 data/audio/
+data/video/
 # أسرار — عمرها ما تترفع
 data/bot_token.txt
 .env

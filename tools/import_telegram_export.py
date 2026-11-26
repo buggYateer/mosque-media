@@ -3,11 +3,12 @@ python tools/import_telegram_export.py "C:\\Users\\...\\Downloads\\Telegram Desk
 
 إزاي تعمل التصدير (مرة أولى لكل القناة، وبعد كده كل أسبوع للجديد بس):
   تليجرام ديسكتوب ← افتح القناة ← ⋮ ← Export chat history
-  ← علّم Audio files (و Voice messages لو بتسجل منه) ← Format: Machine-readable JSON
+  ← علّم Audio files (و Voice messages لو بتسجل منه، و Video files لو بتنزّل فيديو) ← Format: Machine-readable JSON
   ← (للتحديث الأسبوعي: From = آخر مرة صدّرت) ← Export
 بيعمل:
 - يضيف/يحدّث المقاطع في data/messages.json (أي بيانات تجريبية بتتمسح)
-- ينسخ ملفات الصوت لـ data/audio/<رقم الرسالة>.mp3 (ولو الملف مش mp3 وعندك ffmpeg بيحوّله)"""
+- ينسخ ملفات الصوت لـ data/audio/<رقم الرسالة>.mp3 (ولو الملف مش mp3 وعندك ffmpeg بيحوّله)
+- ينسخ ملفات الفيديو لـ data/video/<رقم الرسالة>.<الصيغة> (لحد media.maxUploadMB، والأكبر بيفضل على التليجرام بس)"""
 import json
 import shutil
 import subprocess
@@ -22,6 +23,11 @@ for _s in (sys.stdout, sys.stderr):  # علشان العربي يظهر صح ف�
 SITE = Path(__file__).resolve().parent.parent
 DATA = SITE / "data"
 AUDIO = DATA / "audio"
+VIDEO = DATA / "video"
+sys.path.insert(0, str(SITE / "tools"))
+from apply_config import load_config  # noqa: E402
+
+MAX_VIDEO_MB = (load_config().get("media") or {}).get("maxUploadMB", 500)
 
 
 def text_of(t):
@@ -39,6 +45,10 @@ def fmt_dur(sec):
 
 def is_audio(m):
     return m.get("media_type") in ("audio_file", "voice_message") or str(m.get("mime_type", "")).startswith("audio/")
+
+
+def is_video(m):
+    return m.get("media_type") == "video_file" or str(m.get("mime_type", "")).startswith("video/")
 
 
 def load_messages():
@@ -73,6 +83,16 @@ def store_audio(src, i):
     return dst
 
 
+def store_video(src, i):
+    """ينسخ الفيديو لـ data/video/<id>.<الصيغة> (التحويل لـ mp4 بيحصل وقت الرفع)."""
+    VIDEO.mkdir(parents=True, exist_ok=True)
+    src = Path(src)
+    dst = VIDEO / f"{i}{src.suffix.lower() or '.mp4'}"
+    if not dst.exists() or dst.stat().st_size != src.stat().st_size:
+        shutil.copyfile(src, dst)
+    return dst
+
+
 def main():
     if len(sys.argv) < 2:
         sys.exit(__doc__)
@@ -83,9 +103,10 @@ def main():
     export = json.loads(rj.read_text(encoding="utf-8"))
     msgs = load_messages()
     by_id = {m["id"]: m for m in msgs}
-    added = updated = nofile = 0
+    added = updated = nofile = videos = big = 0
     for m in export.get("messages", []):
-        if m.get("type") != "message" or not is_audio(m):
+        video = is_video(m)
+        if m.get("type") != "message" or not (is_audio(m) or video):
             continue
         i = m["id"]
         rec = by_id.get(i, {"id": i})
@@ -98,7 +119,17 @@ def main():
             "dur": fmt_dur(m.get("duration_seconds")) or rec.get("dur", ""),
         })
         f = folder / m.get("file", "")
-        if m.get("file") and not str(m["file"]).startswith("(") and f.is_file():
+        has_file = m.get("file") and not str(m["file"]).startswith("(") and f.is_file()
+        if video:
+            rec["media"] = "video"
+            videos += 1
+            if has_file and f.stat().st_size <= MAX_VIDEO_MB * 1024 * 1024:
+                store_video(f, i)
+            elif has_file:
+                big += 1
+            elif not any(VIDEO.glob(f"{i}.*")):
+                nofile += 1
+        elif has_file:
             store_audio(f, i)
         elif not any(AUDIO.glob(f"{i}.*")):
             nofile += 1
@@ -106,9 +137,11 @@ def main():
         added += is_new
         updated += not is_new
     save_messages(list(by_id.values()))
-    print(f"✓ مقاطع جديدة: {added} | اتحدّثت: {updated} | من غير ملف صوت: {nofile}")
+    print(f"✓ مقاطع جديدة: {added} | اتحدّثت: {updated} | منهم فيديو: {videos} | من غير ملف: {nofile}")
     if nofile:
-        print("  ⚠ في مقاطع ملفها مش في التصدير — اتأكد إنك علّمت Audio files وإن حجم الملفات المسموح كبير كفاية (Size limit)")
+        print("  ⚠ في مقاطع ملفها مش في التصدير — اتأكد إنك علّمت Audio files (و Video files) وإن حجم الملفات المسموح كبير كفاية (Size limit)")
+    if big:
+        print(f"  ⚠ {big} فيديو أكبر من {MAX_VIDEO_MB} ميجا: هيفضلوا على التليجرام بس. لو عايزهم في الموقع ارفعهم على يوتيوب وحط اللينك من لوحة التحكم.")
 
 
 if __name__ == "__main__":
