@@ -3,7 +3,7 @@
  * Same rules as the original site: edit / hide / move to a series / add a new clip / featured.
  * Pure function: returns a new library and never mutates its input.
  */
-import { DEFAULT_TYPE, TYPE_KEYS } from "./site-shared";
+import { CONFIG_SHEIKHS, DEFAULT_TYPE, sheikhSlug, TYPE_KEYS } from "./site-shared";
 import { KINDS, type Library, type Overrides } from "./storage/types";
 
 export type Site = Library & { featured: number[] };
@@ -17,6 +17,16 @@ export function applyOverrides(source: Library, o: Overrides): Site {
       if (!keepSeries) for (const se of sh.series ?? []) for (const sec of se.sections) sec.ids = sec.ids.filter((x) => x !== id);
     }
   };
+
+  // a sheikh added from the dashboard settings: not in the library until a clip of theirs is (added below, dropped at the end if none)
+  const fromConfig = new Set<string>();
+  for (const c of CONFIG_SHEIKHS) {
+    if (lib.sheikhs.some((x) => x.key === c.key)) continue;
+    let slug = c.slug || sheikhSlug(c.key);
+    while (lib.sheikhs.some((x) => x.slug === slug)) slug += "-2";
+    lib.sheikhs.push({ key: c.key, name: c.name, slug, main: c.main, lesson: [], khutba: [], tilawa: [], other: [], byType: {} });
+    fromConfig.add(c.key);
+  }
 
   // series created from the dashboard (empty ones are dropped at the end)
   for (const ns of o.series) {
@@ -95,5 +105,7 @@ export function applyOverrides(source: Library, o: Overrides): Site {
   }
   // a series with no lessons left doesn't show
   for (const sh of lib.sheikhs) if (sh.series) sh.series = sh.series.filter((se) => se.sections.some((x) => x.ids.length));
+  // a sheikh from the settings with no clips yet (and not a weekly-lesson sheikh) doesn't show
+  lib.sheikhs = lib.sheikhs.filter((sh) => !fromConfig.has(sh.key) || sh.main || Object.values(lib.lessons).some((L) => L.s === sh.key));
   return { ...lib, featured: o.featured.filter((i) => lib.lessons[i]) };
 }

@@ -12,7 +12,7 @@
 import { upload } from "@vercel/blob/client";
 import { CirclePlus, CloudUpload, Eye, EyeOff, ExternalLink, LayoutDashboard, Library, ListOrdered, LogOut, RefreshCw, Search, Send, Settings, Star, Trash2, Undo2, Video } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Link } from "@/i18n/navigation";
 import { AUDIO_EXT, AUDIO_MAX_MB, extOf } from "@/lib/media";
@@ -29,6 +29,7 @@ import { Overview } from "./overview";
 import { move, Reorder } from "./reorder";
 import { SeriesView } from "./series-view";
 import { SettingsView } from "./settings-view";
+import { LocaleSwitcher } from "../locale-switcher";
 import { Card, control, type Ctx, DateField, Dropzone, type Eff, field, H2, type Job, jobKey, MediaFields, mediaError, Row, type State, type Tab } from "./parts";
 
 /** The content types from site.config.json. */
@@ -191,6 +192,20 @@ export function Dashboard({ logo }: { logo: React.ReactNode }) {
           {t("title")}
         </b>
         <span className="flex-1" />
+        {/* switching the language reloads the dashboard, so it waits until the edits are published */}
+        <div
+          onClickCapture={(e) => {
+            if (pending && (e.target as HTMLElement).closest("[role^=menuitem]")) {
+              e.preventDefault();
+              e.stopPropagation();
+              toast.error(t("unsaved"));
+            }
+          }}
+        >
+          <Suspense fallback={null}>
+            <LocaleSwitcher />
+          </Suspense>
+        </div>
         <Link href="/" target="_blank" className="grid size-10 place-items-center rounded-lg hover:bg-header-foreground/10" aria-label={t("openSite")} title={t("openSite")}>
           <ExternalLink className="size-5" />
         </Link>
@@ -242,7 +257,9 @@ export function Dashboard({ logo }: { logo: React.ReactNode }) {
   ];
   const updateOv = (fn: (o: Overrides) => Overrides) => setOv((o) => (o ? fn(o) : o));
   const origOv = JSON.parse(orig) as Overrides;
-  const ctx: Ctx = { t, tk, data, ov, setOv: updateOv, orig: origOv, publish, busy, jobs, addJob, removeJob, retryJob, eff, allIds, shName, seriesOpts, locale, setTab };
+  const addSheikhs = (list: { key: string; name: string }[]) =>
+    setData((d) => (d ? { ...d, sheikhs: [...d.sheikhs, ...list.filter((s) => !d.sheikhs.some((x) => x.key === s.key)).map((s) => ({ key: s.key, name: s.name, series: [] }))] } : d));
+  const ctx: Ctx = { t, tk, data, ov, setOv: updateOv, orig: origOv, publish, busy, jobs, addJob, removeJob, retryJob, eff, allIds, shName, seriesOpts, locale, setTab, addSheikhs };
   const tabs = [
     ["status", LayoutDashboard],
     ["list", Library],

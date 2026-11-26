@@ -2,6 +2,7 @@ import { after } from "next/server";
 import { adminConfigured, isAdmin } from "@/lib/admin/session";
 import { cleanupStaged } from "@/lib/admin/uploads";
 import { config } from "@/lib/config";
+import { CONFIG_SHEIKHS } from "@/lib/site-shared";
 import { getDataStore } from "@/lib/storage";
 
 /** Everything the dashboard needs: the library from the channel, the latest dashboard edits, the sheikhs and series. */
@@ -22,7 +23,10 @@ export async function GET() {
       uploads: Boolean(process.env.BLOB_READ_WRITE_TOKEN),
       maxVideoMB: config.media.maxUploadMB,
       lessons: library.lessons,
-      sheikhs: library.sheikhs.map((s) => ({ key: s.key, name: s.name, series: (s.series ?? []).map((se) => ({ key: se.key, title: se.title, sections: se.sections.map((x) => x.t), ids: se.sections.flatMap((x) => x.ids) })) })),
+      sheikhs: [
+        ...library.sheikhs.map((s) => ({ key: s.key, name: s.name, series: (s.series ?? []).map((se) => ({ key: se.key, title: se.title, sections: se.sections.map((x) => x.t), ids: se.sections.flatMap((x) => x.ids) })) })),
+        ...CONFIG_SHEIKHS.filter((c) => !library.sheikhs.some((s) => s.key === c.key)).map((c) => ({ key: c.key, name: c.name, series: [] })),
+      ],
       seriesOf,
       overrides,
     });

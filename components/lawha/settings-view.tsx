@@ -53,7 +53,7 @@ const list = (s: string) =>
     .filter(Boolean);
 
 export function SettingsView(c: Ctx) {
-  const { t } = c;
+  const { t, addSheikhs } = c;
   const tc = useTranslations("common");
   const tn = useTranslations("nav");
   const [before, setBefore] = useState<Cfg | null>(null);
@@ -117,6 +117,7 @@ export function SettingsView(c: Ctx) {
     const j = r ? await r.json().catch(() => ({})) : {};
     if (r?.ok) {
       setBefore(structuredClone(cfg));
+      addSheikhs(cfg.sheikhs ?? []);
       return toast.success(t("settings.saved"));
     }
     if (r?.status === 409) return toast.error(t("settings.changedElsewhere"));
@@ -289,6 +290,7 @@ export function SettingsView(c: Ctx) {
           {t("settings.addSheikh")}
         </Button>
       </div>
+      {sheikhs.some((s) => !c.data.sheikhs.some((x) => x.key === s.key)) ? <p className="text-sm text-muted-foreground">{t("settings.newSheikhSave")}</p> : null}
 
       <H2>{t("settings.video")}</H2>
       <div className={section}>

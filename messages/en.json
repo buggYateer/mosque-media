@@ -455,6 +455,7 @@
       "day": "Lesson day (e.g. «Tuesday lesson»)",
       "newSheikh": "A new sheikh's name",
       "addSheikh": "Add a sheikh",
+      "newSheikhSave": "The new sheikh shows up in «Add a recording» once you press «Save settings».",
       "video": "Video",
       "maxUpload": "Largest video file to upload (MB)",
       "problems": "Some things need fixing before saving:",

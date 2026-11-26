@@ -47,6 +47,8 @@ export type Ctx = {
   seriesOpts: (readonly [string, string])[];
   locale: string;
   setTab: (t: Tab) => void;
+  /** after saving the settings: sheikhs the add list doesn't know yet */
+  addSheikhs: (list: { key: string; name: string }[]) => void;
 };
 
 export const field = "flex flex-col gap-1.5 text-sm font-semibold text-muted-foreground";

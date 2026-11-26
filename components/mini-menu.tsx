@@ -28,6 +28,8 @@ export function MiniMenu({
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
+  // opens upward when there's no room below (e.g. the player bar at the bottom of the screen)
+  const [up, setUp] = useState(side === "top");
   const root = useRef<HTMLDivElement>(null);
   const id = useId();
   useEffect(() => {
@@ -59,7 +61,14 @@ export function MiniMenu({
   const itemCls = "flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-start text-sm outline-none hover:bg-accent focus:bg-accent";
   return (
     <div ref={root} className="relative">
-      <button type="button" aria-haspopup="menu" aria-expanded={open} aria-controls={id} aria-label={label} title={label} className={triggerClass} onClick={() => setOpen((o) => !o)}>
+      <button type="button" aria-haspopup="menu" aria-expanded={open} aria-controls={id} aria-label={label} title={label} className={triggerClass} onClick={() => {
+          if (!open && root.current) {
+            const r = root.current.getBoundingClientRect();
+            const need = 48 + items.length * 36;
+            setUp(side === "top" ? r.top >= need || r.top > innerHeight - r.bottom : innerHeight - r.bottom < need && r.top > innerHeight - r.bottom);
+          }
+          setOpen((o) => !o);
+        }}>
         {trigger}
       </button>
       {open ? (
@@ -69,7 +78,7 @@ export function MiniMenu({
           aria-label={label}
           className={cn(
             "absolute z-50 min-w-40 rounded-lg border bg-popover p-1 text-popover-foreground shadow-lg",
-            side === "bottom" ? "top-full mt-1.5" : "bottom-full mb-1.5",
+            up ? "bottom-full mb-1.5" : "top-full mt-1.5",
             align === "start" ? "start-0" : align === "end" ? "end-0" : "start-1/2 -translate-x-1/2 rtl:translate-x-1/2",
             className,
           )}
