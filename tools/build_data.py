@@ -195,6 +195,11 @@ def main():
             **({"g": gregorian_of(m)} if gregorian_of(m) else {}),
             "p": max(local, int(uploaded.get(str(m["id"]), 0)), 1 if m.get("demo") else 0),
         }
+        # فيديو (لينك يوتيوب/فيسبوك/درايف/مباشر، أو "file" لملف مرفوع) وصوت متخزّن في مكان تاني (لينك مباشر)
+        if m.get("video"):
+            L["vid"] = m["video"]
+        if m.get("audioLink"):
+            L["au"] = m["audioLink"]
         if str(m["id"]) in views:
             L["v"] = views[str(m["id"])]
         lessons[m["id"]] = L

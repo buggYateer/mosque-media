@@ -11,6 +11,7 @@ export function githubReleases(audioBase: string): AudioStore {
   return {
     name: "github-releases",
     audioUrl: (id, part, lesson) => `${audioBase}/audio-${Math.floor(id / 500)}/${fileName(id, part, lesson.p)}`,
+    videoUrl: (id) => `${audioBase}/audio-${Math.floor(id / 500)}/${id}.mp4`,
   };
 }
 
@@ -20,5 +21,5 @@ export function githubReleases(audioBase: string): AudioStore {
  */
 export function s3Audio(publicBase: string): AudioStore {
   const base = publicBase.replace(/\/$/, "");
-  return { name: "s3", audioUrl: (id, part, lesson) => `${base}/${fileName(id, part, lesson.p)}` };
+  return { name: "s3", audioUrl: (id, part, lesson) => `${base}/${fileName(id, part, lesson.p)}`, videoUrl: (id) => `${base}/${id}.mp4` };
 }

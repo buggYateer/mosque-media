@@ -65,7 +65,7 @@ export function PlayerBar() {
   const acts = (
     <div className="flex items-center gap-0.5">
       <ShareButton path={`/l/${L.id}`} title={L.t} variant="icon" className={cn(!ex && "max-md:hidden")} />
-      <a href={p.downloadUrl(L.id)} className={cn(iconBtn, !ex && "max-md:hidden")} aria-label={t("common.download")} title={t("common.download")}>
+      <a href={L.au || p.downloadUrl(L.id)} {...(L.au ? { target: "_blank", rel: "noopener" } : {})} className={cn(iconBtn, !ex && "max-md:hidden")} aria-label={t("common.download")} title={t("common.download")}>
         <Download className="size-5" />
       </a>
       {p.telegramUrl(L.id) ? (

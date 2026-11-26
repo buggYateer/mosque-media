@@ -23,6 +23,7 @@ export default async function Home() {
   const latestCards = lk.items(lk.ids.slice(0, 4));
   const popular = lk.items(popularPicks(lk, await currentWeek()));
   const featured = lk.items(site.featured.slice(0, 8));
+  const videos = lk.items(lk.ids.filter((i) => site.lessons[String(i)].vid).slice(0, 8));
   const allSeries = site.sheikhs.flatMap((sh) => (sh.series ?? []).map((se) => ({ se, sh })));
   const date = feature ? dateText(feature, { months: t.raw("common.months") as string[], hijriSuffix: t("common.hijriSuffix"), locale }) : "";
 
@@ -71,6 +72,14 @@ export default async function Home() {
         <SectionHead title={t("home.featured")} />
         <Rail>
           <HomeCards items={featured} />
+        </Rail>
+      </>
+    ) : null,
+    videos: videos.length ? (
+      <>
+        <SectionHead title={t("home.videos")} href="/videos" />
+        <Rail>
+          <HomeCards items={videos} />
         </Rail>
       </>
     ) : null,

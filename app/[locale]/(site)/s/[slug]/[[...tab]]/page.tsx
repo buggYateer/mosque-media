@@ -13,6 +13,10 @@ import { clipCount, newest, sheikhAll, sheikhTabs, tabIds } from "@/lib/library"
 import { toneOf } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
+// Every page here is prerendered (generateStaticParams), so navigating to it is already instant;
+// this only turns off the dev-time «URL data» note about reading params outside <Suspense>.
+export const instant = false;
+
 export async function generateStaticParams() {
   const site = await getSite();
   return site.sheikhs.flatMap((sh) => [{ slug: sh.slug, tab: [] as string[] }, ...sheikhTabs(sh).map((t) => ({ slug: sh.slug, tab: [t.id] }))]);

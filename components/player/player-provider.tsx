@@ -95,7 +95,8 @@ export function PlayerProvider({ children, audioBase, channel, siteName, logo }:
       const a = audio.current;
       if (!a) return;
       savePos();
-      a.src = audioUrl(item.id, part, item.p);
+      // audio kept elsewhere (a direct link) plays as it is
+      a.src = item.au || audioUrl(item.id, part, item.p);
       a.playbackRate = Number(readStored("speed") ?? 1) || 1;
       if (part === 1) {
         const resume = savedPosition(item.id);

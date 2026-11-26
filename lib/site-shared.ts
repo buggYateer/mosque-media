@@ -32,6 +32,7 @@ type Raw = {
   dates?: { calendar?: string; hijriOffset?: number };
   telegramChannel?: string;
   home?: string[];
+  media?: { video?: string[]; maxUploadMB?: number };
 };
 const cfg = raw as unknown as Raw;
 
@@ -80,7 +81,11 @@ export const SITE_ID_START = 1_000_000;
 
 export const TELEGRAM = (cfg.telegramChannel ?? "").replace(/^@|^https:\/\/t\.me\//g, "").replace(/\/$/, "").trim();
 
-export const HOME_SECTIONS = ["categories", "feature", "latestTilawat", "featured", "weekly", "latest", "popular", "series", "others"] as const;
+export const HOME_SECTIONS = ["categories", "feature", "latestTilawat", "featured", "videos", "weekly", "latest", "popular", "series", "others"] as const;
 export type HomeSection = (typeof HOME_SECTIONS)[number];
+/** Video sources the dashboard accepts, and the largest video file it uploads (MB). */
+export const VIDEO_SOURCES_ON: string[] = cfg.media?.video ?? ["youtube", "facebook", "drive", "link", "file"];
+export const MAX_VIDEO_MB = cfg.media?.maxUploadMB ?? 500;
+
 /** Which home sections show, in this order. */
 export const HOME: HomeSection[] = (cfg.home?.length ? cfg.home : [...HOME_SECTIONS]).filter((s): s is HomeSection => (HOME_SECTIONS as readonly string[]).includes(s));

@@ -17,7 +17,9 @@ export type Item = {
   d: string; // duration
   h: string; // hijri date (raw)
   g?: string; // gregorian date "yyyy-mm-dd"
-  p: number; // audio parts (0 = Telegram only)
+  p: number; // audio parts (0 = no audio: Telegram only, or video only)
+  vid?: string; // video source (see lib/media.ts)
+  au?: string; // audio kept elsewhere (direct link)
   n?: number; // number inside series
   v?: number; // views
   sh?: { slug: string; name: string; key: string; tone: number };
@@ -48,7 +50,10 @@ export function buildLookup(site: Site) {
       d: L.d,
       h: L.h,
       ...(L.g ? { g: L.g } : {}),
-      p: L.p,
+      // an outside audio link plays like an uploaded file
+      p: L.p || (L.au ? 1 : 0),
+      ...(L.vid ? { vid: L.vid } : {}),
+      ...(L.au ? { au: L.au } : {}),
       ...(L.n ? { n: L.n } : {}),
       ...(L.v ? { v: L.v } : {}),
       ...(sh && sh.key !== "غير_محدد" ? { sh: { slug: sh.slug, name: sh.name, key: sh.key, tone: toneOf(config, sh.key) } } : {}),

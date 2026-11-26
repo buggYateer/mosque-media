@@ -10,7 +10,7 @@ import { audioStore } from "@/lib/storage";
 export async function GET(req: NextRequest) {
   const id = req.nextUrl.searchParams.get("id") ?? "";
   const part = req.nextUrl.searchParams.get("p") ?? "";
-  if (!/^\d{1,6}$/.test(id) || (part && !/^\d{1,2}$/.test(part))) return new Response("Bad request", { status: 400 });
+  if (!/^\d{1,7}$/.test(id) || (part && !/^\d{1,2}$/.test(part))) return new Response("Bad request", { status: 400 });
   const site = await getSite();
   const L = site.lessons[id];
   if (!L || !L.p) return new Response("Not available for download", { status: 404 });

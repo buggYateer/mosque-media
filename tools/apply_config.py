@@ -26,7 +26,8 @@ RESERVED_FONTS = {"alexandria", "ibm plex sans arabic"}
 
 BUILTIN_TYPES = ("lesson", "khutba", "tilawa", "other")
 CALENDARS = ("hijri", "gregorian", "both", "none")
-HOME = ("categories", "feature", "latestTilawat", "featured", "weekly", "latest", "popular", "series", "others")
+HOME = ("categories", "feature", "latestTilawat", "featured", "videos", "weekly", "latest", "popular", "series", "others")
+VIDEO_SOURCES = ("youtube", "facebook", "drive", "link", "file")
 
 
 def fail(msg):
@@ -77,6 +78,12 @@ def load_config():
         fail(f"dates.calendar لازم يبقى واحد من دول: {', '.join(CALENDARS)}")
     if not isinstance(dates.get("hijriOffset", 0), int) or not -2 <= dates.get("hijriOffset", 0) <= 2:
         fail("dates.hijriOffset لازم يبقى رقم صحيح من -2 لـ 2 (فرق أيام التقويم الهجري في بلدك)")
+    media = cfg.get("media", {})
+    bad = [x for x in media.get("video", []) if x not in VIDEO_SOURCES]
+    if bad:
+        fail(f"media.video: المصادر دي مش معروفة: {', '.join(bad)} — المتاح: {', '.join(VIDEO_SOURCES)}")
+    if not isinstance(media.get("maxUploadMB", 500), int) or not 10 <= media.get("maxUploadMB", 500) <= 2000:
+        fail("media.maxUploadMB لازم يبقى رقم من 10 لـ 2000 (ميجا)")
     bad = [x for x in cfg.get("home", []) if x not in HOME]
     if bad:
         fail(f"home: الأقسام دي مش معروفة: {', '.join(bad)} — المتاح: {', '.join(HOME)}")

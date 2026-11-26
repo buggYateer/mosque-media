@@ -24,6 +24,8 @@ export const lessonSchema = z.object({
   h: z.string().default(""), // hijri date "d-m-yyyy" or free text
   g: z.string().optional(), // gregorian date "yyyy-mm-dd"
   p: z.number().int().default(0), // number of audio parts available (0 = Telegram only)
+  vid: z.string().optional(), // video: a YouTube / Facebook / Drive / direct link, or "file" (uploaded <id>.mp4) — see lib/media.ts
+  au: z.string().optional(), // audio kept elsewhere: a direct link to the file
   n: z.number().int().optional(), // number inside a series
   v: z.number().int().optional(), // Telegram views
 });
@@ -72,6 +74,8 @@ export const overridesSchema = z.object({
         k: kindSchema.optional(),
         h: z.string().optional(),
         g: z.string().optional(),
+        vid: z.string().optional(), // "" removes the video
+        au: z.string().optional(), // "" removes the outside audio link
         hidden: z.boolean().optional(),
         series: z.string().optional(),
         sec: z.string().optional(),
@@ -100,4 +104,6 @@ export interface AudioStore {
   readonly name: string;
   /** Public URL of one audio part (1-based). */
   audioUrl(id: number, part: number, lesson: Lesson): string;
+  /** Public URL of a video uploaded to the store (<id>.mp4). */
+  videoUrl(id: number): string;
 }

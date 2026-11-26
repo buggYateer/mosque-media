@@ -7,6 +7,10 @@ import { CollectionView } from "@/components/collection-view";
 import { LessonList } from "@/components/lesson-list";
 import { getLookup, getSite } from "@/lib/data";
 
+// Every page here is prerendered (generateStaticParams), so navigating to it is already instant;
+// this only turns off the dev-time «URL data» note about reading params outside <Suspense>.
+export const instant = false;
+
 export async function generateStaticParams() {
   return (await getSite()).collections.map((c) => ({ key: c.key }));
 }

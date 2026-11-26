@@ -15,7 +15,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Link } from "@/i18n/navigation";
 import { gregorianToHijri, hijriToGregorian, parseGregorian, parseHijri, toHijriText, toIso, today } from "@/lib/dates";
-import { CALENDAR, DEFAULT_TYPE, SITE_ID_START, TYPE_KEYS, TYPES } from "@/lib/site-shared";
+import { isAudioLink, parseVideo } from "@/lib/media";
+import { CALENDAR, DEFAULT_TYPE, SITE_ID_START, TYPE_KEYS, TYPES, VIDEO_SOURCES_ON } from "@/lib/site-shared";
 import type { Kind, Lesson, Overrides } from "@/lib/storage/types";
 import { norm } from "@/lib/text";
 import { cn } from "@/lib/utils";
@@ -455,6 +456,37 @@ function DateField({ t, h, g, onChange }: { t: Ctx["t"]; h: string; g: string; o
   return hijri;
 }
 
+/** What's wrong with a video / audio link, or "" when both are fine (or empty). */
+function mediaError(t: Ctx["t"], vid: string, au: string) {
+  if (vid.trim()) {
+    const v = parseVideo(vid.trim(), "x");
+    if (!v || v.source === "file") return t("badLink");
+    if (!VIDEO_SOURCES_ON.includes(v.source)) return t("sourceOff", { site: t(`sourceName.${v.source}`) });
+  }
+  if (au.trim() && !isAudioLink(au.trim())) return t("badLink");
+  return "";
+}
+
+/** A video link (YouTube / Facebook / Drive / direct) and an outside audio link, with what was recognized. */
+function MediaFields({ t, vid, au, onChange }: { t: Ctx["t"]; vid: string; au: string; onChange: (m: { vid: string; au: string }) => void }) {
+  const v = vid.trim() && vid !== "file" ? parseVideo(vid.trim(), "x") : null;
+  const note = !vid.trim() || vid === "file" ? "" : v && VIDEO_SOURCES_ON.includes(v.source) ? t("videoFound", { site: t(`sourceName.${v.source}`) }) : mediaError(t, vid, "");
+  const ok = !!v && VIDEO_SOURCES_ON.includes(v.source);
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      <label className={field}>
+        {t("fieldVideo")}
+        <input className={control} dir="ltr" inputMode="url" placeholder="https://youtu.be/…" value={vid === "file" ? "" : vid} onChange={(e) => onChange({ vid: e.target.value, au })} />
+        {note ? <small className={cn("font-normal", ok ? "text-primary" : "text-destructive")}>{note}</small> : null}
+      </label>
+      <label className={field}>
+        {t("fieldAudioLink")}
+        <input className={control} dir="ltr" inputMode="url" placeholder="https://…/lesson.mp3" value={au} onChange={(e) => onChange({ vid, au: e.target.value })} />
+      </label>
+    </div>
+  );
+}
+
 function FilePick({ t, file, onPick }: { t: Ctx["t"]; file?: File; onPick: (f: File) => void }) {
   return (
     <label className={cn("flex cursor-pointer flex-col items-center gap-1 rounded-xl border-2 border-dashed p-5 text-center hover:bg-muted/50", file && "border-primary bg-accent")}>
@@ -571,16 +603,25 @@ const Tag = ({ tone, children }: { tone: "new" | "ed" | "hid"; children: React.R
 function EditDialog(c: Ctx & { id: number; onClose: () => void }) {
   const { t, id, eff, data, ov, setOv } = c;
   const L = eff(id);
-  const [v, setV] = useState({ t: L.t, s: L.s, k: L.k, h: L.h, g: L.g ?? "", series: L.series, hidden: L.hidden, featured: ov.featured.includes(id) });
+  const [v, setV] = useState({ t: L.t, s: L.s, k: L.k, h: L.h, g: L.g ?? "", vid: L.vid ?? "", au: L.au ?? "", series: L.series, hidden: L.hidden, featured: ov.featured.includes(id) });
   const save = () => {
+    const bad = mediaError(t, v.vid, v.au);
+    if (bad) return toast.error(bad);
     setOv((o) => {
       const n: Overrides = { ...o, edit: { ...o.edit }, add: { ...o.add }, featured: o.featured.filter((x) => x !== id) };
       const [series, sec] = v.series.split("|");
-      if (n.add[id] && !data.lessons[id]) n.add[id] = { ...n.add[id], t: v.t, s: v.s, k: v.k, h: v.h, ...(v.g ? { g: v.g } : {}), series: series ?? "", sec: sec ?? "" };
+      if (n.add[id] && !data.lessons[id]) {
+        const { vid: _v, au: _a, ...rest } = n.add[id];
+        void _v;
+        void _a;
+        n.add[id] = { ...rest, t: v.t, s: v.s, k: v.k, h: v.h, ...(v.g ? { g: v.g } : {}), ...(v.vid.trim() ? { vid: v.vid.trim() } : {}), ...(v.au.trim() ? { au: v.au.trim() } : {}), series: series ?? "", sec: sec ?? "" };
+      }
       else {
         const orig = { ...data.lessons[id], series: data.seriesOf[id] ?? "" };
         const e: Overrides["edit"][string] = {};
         for (const f of ["t", "s", "k", "h", "g"] as const) if (v[f] && v[f] !== (orig[f] ?? "")) (e as Record<string, unknown>)[f] = v[f];
+        // video and outside audio: an emptied field removes it
+        for (const f of ["vid", "au"] as const) if (v[f].trim() !== (orig[f] ?? "")) e[f] = v[f].trim();
         if (v.series !== orig.series) {
           e.series = series ?? "";
           e.sec = sec ?? "";
@@ -630,6 +671,7 @@ function EditDialog(c: Ctx & { id: number; onClose: () => void }) {
               </select>
             </label>
             <DateField t={t} h={v.h} g={v.g} onChange={(d) => setV({ ...v, ...d })} />
+            <MediaFields t={t} vid={v.vid} au={v.au} onChange={(m) => setV({ ...v, ...m })} />
             <label className={field}>
               {t("fieldSeries")}
               <select className={control} value={v.series} onChange={(e) => setV({ ...v, series: e.target.value })}>
@@ -704,20 +746,26 @@ function AddView(c: Ctx) {
       return "";
     }
   });
-  const [v, setV] = useState(() => ({ id: prefill, k: DEFAULT_TYPE as Kind, t: "", s: data.sheikhs[0]?.key ?? "", ...today(), series: "" }));
+  const [v, setV] = useState(() => ({ id: prefill, k: DEFAULT_TYPE as Kind, t: "", s: data.sheikhs[0]?.key ?? "", ...today(), vid: "", au: "", series: "" }));
   const [file, setFile] = useState<File>();
   const [err, setErr] = useState("");
+  // a clip that isn't on Telegram gets its own number, from 1,000,000 up (never clashes with the channel)
+  const nextId = () => String(Math.max(SITE_ID_START - 1, ...[...Object.keys(data.lessons), ...Object.keys(ov.add)].map(Number).filter((n) => n >= SITE_ID_START)) + 1);
   const add = async () => {
-    if (!/^\d+$/.test(v.id)) return setErr(t("errId"));
-    if (data.lessons[v.id] || ov.add[v.id]) return setErr(t("errExists"));
-    if (!file) return setErr(t("errFile"));
-    if (file.size > MAX) return setErr(t("errSize"));
+    const id = v.id || nextId();
+    if (!/^\d+$/.test(id)) return setErr(t("errId"));
+    if (data.lessons[id] || ov.add[id]) return setErr(t("errExists"));
+    if (!file && !v.vid.trim() && !v.au.trim()) return setErr(t("errMedia"));
+    if (file && file.size > MAX) return setErr(t("errSize"));
+    const bad = mediaError(t, v.vid, v.au);
+    if (bad) return setErr(bad);
     if (!v.t.trim()) return setErr(t("errTitle"));
-    const d = await durationOf(file);
+    const d = file ? await durationOf(file) : "";
     const [series, sec] = v.series.split("|");
-    setOv((o) => ({ ...o, add: { ...o.add, [v.id]: { t: v.t.trim(), s: v.s, k: v.k, h: v.h.trim(), ...(v.g ? { g: v.g } : {}), d, p: 1, series: series ?? "", sec: sec ?? "" } } }));
-    setFiles((f) => ({ ...f, [Number(v.id)]: file }));
-    setV({ ...v, id: "", t: "", ...today() });
+    const media = { ...(v.vid.trim() ? { vid: v.vid.trim() } : {}), ...(v.au.trim() ? { au: v.au.trim() } : {}) };
+    setOv((o) => ({ ...o, add: { ...o.add, [id]: { t: v.t.trim(), s: v.s, k: v.k, h: v.h.trim(), ...(v.g ? { g: v.g } : {}), d, p: file ? 1 : 0, ...media, series: series ?? "", sec: sec ?? "" } } }));
+    if (file) setFiles((f) => ({ ...f, [Number(id)]: file }));
+    setV({ ...v, id: "", t: "", vid: "", au: "", ...today() });
     setFile(undefined);
     setErr("");
     toast(t("addedHint"));
@@ -731,7 +779,7 @@ function AddView(c: Ctx) {
         <div className="grid gap-3 sm:grid-cols-2">
           <label className={field}>
             {t("fieldId")}
-            <input className={control} inputMode="numeric" placeholder="650" value={v.id} onChange={(e) => setV({ ...v, id: e.target.value.trim() })} />
+            <input className={control} inputMode="numeric" placeholder={t("idAuto")} value={v.id} onChange={(e) => setV({ ...v, id: e.target.value.trim() })} />
           </label>
           <label className={field}>
             {t("fieldKind")}
@@ -745,6 +793,7 @@ function AddView(c: Ctx) {
           </label>
         </div>
         <FilePick t={t} file={file} onPick={setFile} />
+        <MediaFields t={t} vid={v.vid} au={v.au} onChange={(m) => setV({ ...v, ...m })} />
         <label className={field}>
           {t("fieldTitle")}
           <input className={control} placeholder={t("titlePlaceholder")} value={v.t} onChange={(e) => setV({ ...v, t: e.target.value })} />
@@ -773,7 +822,8 @@ function AddView(c: Ctx) {
             ))}
           </select>
         </label>
-        <Button onClick={add} disabled={!data.uploads} className="h-10 gap-2 self-start px-5 font-bold">
+        {/* uploading a file needs the Blob store; links don't */}
+        <Button onClick={add} disabled={!!file && !data.uploads} className="h-10 gap-2 self-start px-5 font-bold">
           <CirclePlus className="size-5" />
           {t("add")}
         </Button>

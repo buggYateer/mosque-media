@@ -36,7 +36,8 @@ export function LessonActions({ item }: { item: Item }) {
             {t("listen")}
           </button>
           <a
-            href={p.downloadUrl(item.id)}
+            href={item.au || p.downloadUrl(item.id)}
+            {...(item.au ? { target: "_blank", rel: "noopener" } : {})}
             className={btn}
             onClick={(e) => {
               if (item.p > 1) {

@@ -25,6 +25,7 @@ export function applyOverrides(source: Library, o: Overrides): Site {
   for (const { k, e, isNew } of entries) {
     const id = Number(k);
     if (isNew && !lib.lessons[k]) lib.lessons[k] = { t: e.t ?? "", s: e.s ?? "", k: e.k ?? DEFAULT_TYPE, h: e.h ?? "", d: e.d ?? "", p: e.p ?? 0 };
+    // a new clip with only a video or an outside audio link still counts as a clip
     const L = lib.lessons[k];
     if (!L) continue;
     if (e.hidden) {
@@ -36,6 +37,12 @@ export function applyOverrides(source: Library, o: Overrides): Site {
     for (const f of ["t", "s", "k", "h", "g", "d", "p"] as const) {
       const v = e[f];
       if (v !== undefined && v !== "") (L as Record<string, unknown>)[f] = v;
+    }
+    // video / outside audio: an empty value removes it
+    for (const f of ["vid", "au"] as const) {
+      const v = e[f];
+      if (v === "") delete L[f];
+      else if (v !== undefined) L[f] = v;
     }
     if (e.series !== undefined) {
       dropEverywhere(id);

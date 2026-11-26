@@ -109,7 +109,14 @@ const configSchema = z
       })
       .default({ calendar: "hijri", hijriOffset: 0 }),
     /** Which home sections show, in this order. */
-    home: z.array(z.enum(["categories", "feature", "latestTilawat", "featured", "weekly", "latest", "popular", "series", "others"])).optional(),
+    home: z.array(z.enum(["categories", "feature", "latestTilawat", "featured", "videos", "weekly", "latest", "popular", "series", "others"])).optional(),
+    /** Video: which sources the dashboard accepts, and the largest video file that can be uploaded. */
+    media: z
+      .object({
+        video: z.array(z.enum(["youtube", "facebook", "drive", "link", "file"])).default(["youtube", "facebook", "drive", "link", "file"]),
+        maxUploadMB: z.number().int().min(10).max(2000).default(500),
+      })
+      .default({ video: ["youtube", "facebook", "drive", "link", "file"], maxUploadMB: 500 }),
     /** Change any wording of the site, per language: {"ar": {"common.sheikh": "الأستاذ"}}. Keys are in messages/<language>.json. */
     texts: z.partialRecord(z.enum(LOCALES), z.record(z.string(), z.string())).default({}),
     /** Words before a sheikh's name in captions, per language (used by tools/build_data.py). */

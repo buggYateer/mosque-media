@@ -5,7 +5,7 @@ import { localAudio } from "@/lib/dev-audio";
 export async function GET(req: Request, { params }: RouteContext<"/api/dev-audio/[file]">) {
   const site = await getSite();
   if (process.env.NODE_ENV !== "development" && !site.demo) return new Response("Not found", { status: 404 });
-  const m = /^(\d{1,6})(?:_(\d{1,2}))?\.mp3$/.exec((await params).file);
+  const m = /^(\d{1,7})(?:_(\d{1,2}))?\.mp3$/.exec((await params).file);
   if (!m) return new Response("Bad request", { status: 400 });
   const { body, type } = localAudio(Number(m[1]), Number(m[2] ?? 1));
   const size = body.length;

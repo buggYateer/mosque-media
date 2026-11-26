@@ -39,6 +39,11 @@ export async function getCategories() {
   return [
     // `type` = the type key; its title is the «kinds.<key>» message
     ...TYPES.filter((t) => t.menu).map((t) => ({ href: t.path, icon: t.icon, key: "", type: t.key, n: n(t.key) })),
+    // videos, once the site has any
+    ...(() => {
+      const v = lk.ids.filter((i) => lk.site.lessons[String(i)].vid).length;
+      return v ? [{ href: "/videos", icon: "video", key: "videos", n: v }] : [];
+    })(),
     ...lk.site.collections.filter((c) => c.ids.length).map((c) => ({ href: `/c/${c.key}`, icon: c.icon ?? "bedtime", key: "", label: c.label ?? c.title, n: c.ids.length })),
   ] as { href: string; icon: string; key: string; type?: string; label?: string; n: number }[];
 }

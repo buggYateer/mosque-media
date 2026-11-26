@@ -41,6 +41,7 @@ The assistant follows [AGENTS.md](AGENTS.md). It checks your tools, asks about y
 
 ## Features
 
+- **Video too.** Any recording can have a video: a YouTube, Facebook or Google Drive link, or a direct link to a video file. It plays on the recording's page (YouTube in privacy mode, loaded only when pressed), and a *Videos* section appears once there are any. Audio kept elsewhere can be linked as well.
 - **Browse by sheikh, series and type.** Lessons, Friday sermons, recitations, latest uploads, most listened, and search.
 - **Built-in player.** Remembers where you stopped, offers playback speed, plays the next lesson automatically, and works from the lock screen. Downloads save with the Arabic lesson title.
 - **Automatic collections.** For example, every clip that mentions «رمضان» is grouped into *Ramadan Nights*.
@@ -136,6 +137,7 @@ Nothing is forced on a mosque. All of this lives in `site.config.json` and has a
 | `"texts": { "ar": { "common.sheikh": "الأستاذ" } }` | Change any wording of the site, per language. Keys come from `messages/<language>.json`. |
 | `"home": ["feature", "categories", "latest"]` | Which home sections show, and in what order. |
 | `telegramChannel` | Optional. Without it, every Telegram button disappears. |
+| `"media": { "video": ["youtube", "drive"] }` | Which video sources the dashboard accepts (`youtube`, `facebook`, `drive`, `link`, `file`). |
 
 Run `python tools/apply_config.py` after a change; it points to the exact mistake if there is one. The Arabic guide has examples.
 

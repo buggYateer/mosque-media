@@ -11,7 +11,7 @@ import { scriptFonts, siteFont } from "@/lib/generated/font";
 import { themeCss } from "@/lib/theme";
 import "../globals.css";
 
-const CLIENT_NAMESPACES = ["nav", "kind", "kinds", "common", "filters", "player", "pwa", "collection", "pages"];
+const CLIENT_NAMESPACES = ["nav", "kind", "kinds", "common", "filters", "player", "pwa", "collection", "pages", "video"];
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));

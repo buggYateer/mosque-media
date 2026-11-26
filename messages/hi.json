@@ -24,7 +24,8 @@
     "sections": "विभाग",
     "browse": "देखें",
     "more": "और",
-    "install": "ऐप इंस्टॉल करें"
+    "install": "ऐप इंस्टॉल करें",
+    "videos": "वीडियो"
   },
   "kinds": {
     "lesson": "दर्स",
@@ -90,7 +91,8 @@
     "latest": "नवीनतम",
     "popular": "सबसे ज़्यादा सुने गए",
     "series": "सिलसिले",
-    "others": "वक्ता"
+    "others": "वक्ता",
+    "videos": "नए वीडियो"
   },
   "pages": {
     "latest": {
@@ -133,6 +135,10 @@
       "title": "खोज",
       "prompt": "दर्स, शेख़ या सूरह का नाम लिखें",
       "results": "{count, plural, =0 {“{q}” के लिए कोई नतीजा नहीं} one {“{q}” के लिए # नतीजा} other {“{q}” के लिए # नतीजे}}"
+    },
+    "videos": {
+      "title": "वीडियो",
+      "unit": "{count, plural, one {# वीडियो} other {# वीडियो}}"
     }
   },
   "filters": {
@@ -278,7 +284,7 @@
     "readyHint": "तैयार — अपलोड के लिए “बदलाव प्रकाशित करें” दबाएँ",
     "uploadsOff": "फ़ाइलें अपलोड करने के लिए Vercel Blob चाहिए: Vercel → Storage → Create → Blob → Connect, फिर Redeploy।",
     "addTitle": "नई रिकॉर्डिंग जोड़ें",
-    "addHint": "उन रिकॉर्डिंग के लिए जो चैनल पर हैं पर साइट पर नहीं। पोस्ट नंबर टेलीग्राम लिंक का आख़िरी नंबर है।",
+    "addHint": "नया क्लिप जोड़ें: ऑडियो फ़ाइल, या वीडियो या ऑडियो लिंक। अगर टेलीग्राम पर है तो उसका संदेश नंबर लिखें (लिंक का आख़िरी नंबर), वरना नंबर खाली छोड़ें।",
     "fieldId": "टेलीग्राम पोस्ट नंबर",
     "titlePlaceholder": "जैसा चैनल पर लिखा है",
     "add": "जोड़ें",
@@ -293,6 +299,34 @@
     "featuredHint": "होम पेज पर दिखती हैं। “रिकॉर्डिंग” से खोलें और “चुनिंदा” पर निशान लगाएँ।",
     "noFeatured": "अभी कोई चुनिंदा रिकॉर्डिंग नहीं",
     "moveUp": "ऊपर",
-    "storage": "डेटा: {data} · ऑडियो: {audio}"
+    "storage": "डेटा: {data} · ऑडियो: {audio}",
+    "fieldVideo": "वीडियो लिंक (YouTube, Facebook, Drive या सीधा लिंक)",
+    "fieldAudioLink": "कहीं और रखी ऑडियो का लिंक (वैकल्पिक)",
+    "videoFound": "{site} से वीडियो",
+    "badLink": "यह लिंक समर्थित नहीं है",
+    "sourceOff": "यह साइट {site} के लिंक नहीं लेती",
+    "errMedia": "ऑडियो फ़ाइल चुनें या वीडियो/ऑडियो लिंक डालें",
+    "idAuto": "खाली = अपने आप नंबर (अगर टेलीग्राम पर नहीं)",
+    "sourceName": {
+      "youtube": "YouTube",
+      "facebook": "Facebook",
+      "drive": "Google Drive",
+      "link": "सीधा लिंक",
+      "file": "अपलोड फ़ाइल"
+    }
+  },
+  "video": {
+    "play": "वीडियो चलाएँ",
+    "openOn": "{site} पर खोलें",
+    "badge": "वीडियो",
+    "watch": "देखें",
+    "listen": "सुनें",
+    "site": {
+      "youtube": "YouTube",
+      "facebook": "Facebook",
+      "drive": "Google Drive",
+      "link": "लिंक",
+      "file": "फ़ाइल"
+    }
   }
 }

@@ -24,7 +24,8 @@
     "sections": "Sections",
     "browse": "Browse",
     "more": "More",
-    "install": "Install the app"
+    "install": "Install the app",
+    "videos": "Videos"
   },
   "kinds": {
     "lesson": "Lessons",
@@ -90,7 +91,8 @@
     "latest": "Latest uploads",
     "popular": "Most listened",
     "series": "Series",
-    "others": "Speakers"
+    "others": "Speakers",
+    "videos": "Latest videos"
   },
   "pages": {
     "latest": {
@@ -133,6 +135,10 @@
       "title": "Search",
       "prompt": "Type a lesson, sheikh or surah name",
       "results": "{count, plural, =0 {No results for “{q}”} one {# result for “{q}”} other {# results for “{q}”}}"
+    },
+    "videos": {
+      "title": "Videos",
+      "unit": "{count, plural, one {# video} other {# videos}}"
     }
   },
   "filters": {
@@ -278,7 +284,7 @@
     "readyHint": "Ready — tap “Publish changes” to upload it",
     "uploadsOff": "Uploading files needs Vercel Blob: Vercel → Storage → Create → Blob → Connect, then redeploy.",
     "addTitle": "Add a new recording",
-    "addHint": "For recordings on the channel that aren't on the site. The post number is the last number in its Telegram link.",
+    "addHint": "Add a new clip: an audio file, or a video or audio link. If it's on Telegram, enter its message number (the last number in its link); otherwise leave the number empty.",
     "fieldId": "Telegram post number",
     "titlePlaceholder": "As written on the channel",
     "add": "Add",
@@ -293,6 +299,34 @@
     "featuredHint": "Shown on the home page. Add one from “Recordings” → open it → tick “Featured”.",
     "noFeatured": "No featured recordings yet",
     "moveUp": "Move up",
-    "storage": "Data: {data} · Audio: {audio}"
+    "storage": "Data: {data} · Audio: {audio}",
+    "fieldVideo": "Video link (YouTube, Facebook, Drive or a direct link)",
+    "fieldAudioLink": "Audio link from elsewhere (optional)",
+    "videoFound": "Video from {site}",
+    "badLink": "This link isn't supported",
+    "sourceOff": "This site doesn't accept links from {site}",
+    "errMedia": "Pick an audio file, or add a video or audio link",
+    "idAuto": "Empty = automatic number (if not on Telegram)",
+    "sourceName": {
+      "youtube": "YouTube",
+      "facebook": "Facebook",
+      "drive": "Google Drive",
+      "link": "a direct link",
+      "file": "an uploaded file"
+    }
+  },
+  "video": {
+    "play": "Play video",
+    "openOn": "Open on {site}",
+    "badge": "Video",
+    "watch": "Watch",
+    "listen": "Listen",
+    "site": {
+      "youtube": "YouTube",
+      "facebook": "Facebook",
+      "drive": "Google Drive",
+      "link": "the link",
+      "file": "the file"
+    }
   }
 }

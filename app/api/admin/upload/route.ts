@@ -15,7 +15,7 @@ export async function POST(req: Request) {
       request: req,
       onBeforeGenerateToken: async (pathname) => {
         if (!(await isAdmin())) throw new Error("signed-out");
-        if (!/^incoming\/\d{1,6}(_\d{1,2})?\.mp3$/.test(pathname)) throw new Error("bad-path");
+        if (!/^incoming\/\d{1,7}(_\d{1,2})?\.mp3$/.test(pathname)) throw new Error("bad-path");
         return { allowedContentTypes: ["audio/mpeg", "audio/mp3"], maximumSizeInBytes: 300 * 1024 * 1024, addRandomSuffix: true };
       },
     });
