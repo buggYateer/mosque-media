@@ -16,7 +16,7 @@ export type State = {
   uploads: boolean;
   maxVideoMB: number;
   lessons: Record<string, Lesson>;
-  sheikhs: { key: string; name: string; series: { key: string; title: string; sections: string[] }[] }[];
+  sheikhs: { key: string; name: string; series: { key: string; title: string; sections: string[]; ids: number[] }[] }[];
   seriesOf: Record<string, string>;
   overrides: Overrides;
 };
@@ -26,13 +26,17 @@ export type Eff = Lesson & { series: string; hidden: boolean; isNew: boolean; ed
 export type Job = { key: string; id: number; kind: "audio" | "video"; file: File; ext: string; pct: number; url?: string; err?: string };
 export const jobKey = (id: number | string, kind: Job["kind"]) => `${id}:${kind}`;
 
-export type Tab = "status" | "list" | "add" | "featured";
+export type Tab = "status" | "list" | "add" | "series" | "featured" | "settings";
 export type Ctx = {
   t: ReturnType<typeof useTranslations<"lawha">>;
   tk: ReturnType<typeof useTranslations<"kind">>;
   data: State;
   ov: Overrides;
   setOv: (fn: (o: Overrides) => Overrides) => void;
+  /** the edits as last published (to list and undo what's new) */
+  orig: Overrides;
+  publish: () => void;
+  busy: string;
   jobs: Record<string, Job>;
   addJob: (id: number, kind: Job["kind"], file: File) => void;
   removeJob: (key: string) => void;

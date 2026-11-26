@@ -22,7 +22,7 @@ export async function GET() {
       uploads: Boolean(process.env.BLOB_READ_WRITE_TOKEN),
       maxVideoMB: config.media.maxUploadMB,
       lessons: library.lessons,
-      sheikhs: library.sheikhs.map((s) => ({ key: s.key, name: s.name, series: (s.series ?? []).map((se) => ({ key: se.key, title: se.title, sections: se.sections.map((x) => x.t) })) })),
+      sheikhs: library.sheikhs.map((s) => ({ key: s.key, name: s.name, series: (s.series ?? []).map((se) => ({ key: se.key, title: se.title, sections: se.sections.map((x) => x.t), ids: se.sections.flatMap((x) => x.ids) })) })),
       seriesOf,
       overrides,
     });

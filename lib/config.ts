@@ -136,6 +136,12 @@ const configSchema = z
 export type SiteConfig = z.output<typeof configSchema>;
 export type Sheikh = SiteConfig["sheikhs"][number];
 
+/** Problems in a site.config.json (empty when it's fine) — used by the dashboard's settings screen. */
+export function configProblems(value: unknown): string[] {
+  const r = configSchema.safeParse(value);
+  return r.success ? [] : r.error.issues.map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`);
+}
+
 function parse(): SiteConfig {
   const r = configSchema.safeParse(raw);
   if (!r.success) {

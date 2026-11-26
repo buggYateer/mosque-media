@@ -77,6 +77,22 @@ export function applyOverrides(source: Library, o: Overrides): Site {
     const sh = byKey.get(L.s);
     if (sh && !inSeriesSet.has(id) && !inColl.has(id)) (sh.byType[L.k] ??= []).push(id);
   }
+  // renamed series, and lessons in the order the admin chose (ones not listed keep their place after them)
+  for (const { se } of allSeries()) {
+    const e = o.seriesEdit[se.key];
+    if (!e) continue;
+    if (e.title) se.title = e.title;
+    if (e.order?.length) {
+      const all = se.sections.flatMap((x) => x.ids);
+      const first = e.order.filter((id) => all.includes(id));
+      const rest = all.filter((id) => !first.includes(id));
+      // one section: just reorder it; several sections: reorder inside each one
+      for (const sec of se.sections) {
+        const mine = new Set(sec.ids);
+        sec.ids = [...first.filter((id) => mine.has(id)), ...rest.filter((id) => mine.has(id))];
+      }
+    }
+  }
   // a series with no lessons left doesn't show
   for (const sh of lib.sheikhs) if (sh.series) sh.series = sh.series.filter((se) => se.sections.some((x) => x.ids.length));
   return { ...lib, featured: o.featured.filter((i) => lib.lessons[i]) };

@@ -22,6 +22,7 @@ const edits: Overrides = {
   featured: [Number(firstId)],
   ignore: [12345],
   series: [],
+  seriesEdit: {},
 };
 
 async function contract(name: string, store: ReturnType<typeof sqlStore>) {

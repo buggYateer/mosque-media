@@ -10,7 +10,7 @@
  * Picked files start uploading to Vercel Blob at once; publishing waits for them.
  */
 import { upload } from "@vercel/blob/client";
-import { ArrowUp, CirclePlus, CloudUpload, ExternalLink, EyeOff, LayoutDashboard, Library, LogOut, RefreshCw, Search, Send, Star, Trash2, Undo2 } from "lucide-react";
+import { CirclePlus, CloudUpload, Eye, EyeOff, ExternalLink, LayoutDashboard, Library, ListOrdered, LogOut, RefreshCw, Search, Send, Settings, Star, Trash2, Undo2, Video } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -25,6 +25,10 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "../ui/input";
 import { Switch } from "../ui/switch";
 import { AddWizard } from "./add-wizard";
+import { Overview } from "./overview";
+import { move, Reorder } from "./reorder";
+import { SeriesView } from "./series-view";
+import { SettingsView } from "./settings-view";
 import { Card, control, type Ctx, DateField, Dropzone, type Eff, field, H2, type Job, jobKey, MediaFields, mediaError, Row, type State, type Tab } from "./parts";
 
 /** The content types from site.config.json. */
@@ -237,12 +241,15 @@ export function Dashboard({ logo }: { logo: React.ReactNode }) {
     ...ov.series.map((se) => [`${se.key}|`, `${se.title} (${shName(se.sheikh)})`] as const),
   ];
   const updateOv = (fn: (o: Overrides) => Overrides) => setOv((o) => (o ? fn(o) : o));
-  const ctx: Ctx = { t, tk, data, ov, setOv: updateOv, jobs, addJob, removeJob, retryJob, eff, allIds, shName, seriesOpts, locale, setTab };
+  const origOv = JSON.parse(orig) as Overrides;
+  const ctx: Ctx = { t, tk, data, ov, setOv: updateOv, orig: origOv, publish, busy, jobs, addJob, removeJob, retryJob, eff, allIds, shName, seriesOpts, locale, setTab };
   const tabs = [
     ["status", LayoutDashboard],
     ["list", Library],
     ["add", CirclePlus],
+    ["series", ListOrdered],
     ["featured", Star],
+    ["settings", Settings],
   ] as const;
 
   return (
@@ -262,7 +269,9 @@ export function Dashboard({ logo }: { logo: React.ReactNode }) {
         {tab === "status" ? <StatusView {...ctx} /> : null}
         {tab === "list" ? <ListView {...ctx} /> : null}
         {tab === "add" ? <AddWizard {...ctx} /> : null}
+        {tab === "series" ? <SeriesView {...ctx} /> : null}
         {tab === "featured" ? <FeaturedView {...ctx} /> : null}
+        {tab === "settings" ? <SettingsView {...ctx} /> : null}
         <p className="mt-8 text-center text-xs text-muted-foreground">{t("storage", { data: data.storage.data, audio: data.storage.audio })}</p>
       </main>
     </>
@@ -342,6 +351,8 @@ function StatusView(c: Ctx) {
 
   return (
     <>
+      <Overview {...c} />
+      <H2>{t("home.channel")}</H2>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {stat(t("lastOnSite"), lastSite, eff(lastSite).t)}
         {data.channel ? stat(t("lastOnChannel"), chan ? chan.last || "؟" : "…", chan ? (chan.found.length ? new Date(chan.found.at(-1)!.date).toLocaleDateString(c.locale) : t("nothingNew")) : t("searching")) : null}
@@ -457,18 +468,36 @@ function ListView(c: Ctx) {
   const { t, allIds, eff, shName } = c;
   const [q, setQ] = useState("");
   const [kf, setKf] = useState("");
+  const [sf, setSf] = useState("");
   const [editing, setEditing] = useState<number | null>(null);
   const ids = useMemo(
     () =>
       allIds.filter((i) => {
         const L = eff(i);
-        return (!kf || L.k === kf || (kf === "hid" && L.hidden) || (kf === "ed" && (L.edited || L.isNew))) && (!q || norm(`${i} ${L.t} ${shName(L.s)}`).includes(norm(q)));
+        return (
+          (!kf || L.k === kf || (kf === "hid" && L.hidden) || (kf === "ed" && (L.edited || L.isNew)) || (kf === "vid" && !!L.vid)) &&
+          (!sf || L.s === sf) &&
+          (!q || norm(`${i} ${L.t} ${shName(L.s)}`).includes(norm(q)))
+        );
       }),
-    [allIds, eff, kf, q, shName],
+    [allIds, eff, kf, sf, q, shName],
   );
+  const toggleHidden = (i: number) =>
+    c.setOv((o) => {
+      const id = String(i);
+      const e = { ...(o.edit[id] ?? {}) };
+      if (e.hidden) delete e.hidden;
+      else e.hidden = true;
+      const edit = { ...o.edit };
+      if (Object.keys(e).length) edit[id] = e;
+      else delete edit[id];
+      return { ...o, edit };
+    });
+  const toggleFeatured = (i: number) => c.setOv((o) => ({ ...o, featured: o.featured.includes(i) ? o.featured.filter((x) => x !== i) : [i, ...o.featured] }));
   const chips: [string, string][] = [
     ["", t("filterAll")],
     ...TYPES.filter((x) => x.menu).map((x): [string, string] => [x.key, c.tk(x.key)]),
+    ["vid", t("filterVideo")],
     ["ed", t("filterEdited")],
     ["hid", t("filterHidden")],
   ];
@@ -478,7 +507,15 @@ function ListView(c: Ctx) {
         <Search className="size-5 text-muted-foreground" />
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("searchPlaceholder")} className="h-11 flex-1 bg-transparent outline-none" />
       </div>
-      <div className="mb-3 flex flex-wrap gap-2">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <select value={sf} onChange={(e) => setSf(e.target.value)} className="h-8 rounded-full border bg-card px-3 text-sm font-semibold" aria-label={t("fieldSheikh")}>
+          <option value="">{t("allSheikhs")}</option>
+          {c.data.sheikhs.map((s) => (
+            <option key={s.key} value={s.key}>
+              {s.name}
+            </option>
+          ))}
+        </select>
         {chips.map(([k, label]) => (
           <button key={k} onClick={() => setKf(k)} className={cn("rounded-full border bg-card px-3.5 py-1 text-sm font-semibold", kf === k && "border-primary bg-primary text-primary-foreground")}>
             {label}
@@ -495,13 +532,40 @@ function ListView(c: Ctx) {
               onClick={() => setEditing(i)}
               title={
                 <>
+                  {L.vid ? <Video className="me-1.5 inline size-4 align-[-2px] text-primary" /> : null}
                   {L.t}
                   {L.isNew ? <Tag tone="new">{t("tagNew")}</Tag> : null}
                   {L.hidden ? <Tag tone="hid">{t("tagHidden")}</Tag> : L.edited ? <Tag tone="ed">{t("tagEdited")}</Tag> : null}
                 </>
               }
               sub={`${shName(L.s)} · ${c.tk(L.k)}`}
-            />
+            >
+              {/* quick actions (the row itself opens the full edit) */}
+              <Button
+                size="icon-sm"
+                variant="ghost"
+                aria-label={c.ov.featured.includes(i) ? t("unfeature") : t("feature")}
+                title={c.ov.featured.includes(i) ? t("unfeature") : t("feature")}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleFeatured(i);
+                }}
+              >
+                <Star className={cn("size-4", c.ov.featured.includes(i) && "fill-highlight text-highlight")} />
+              </Button>
+              <Button
+                size="icon-sm"
+                variant="ghost"
+                aria-label={L.hidden ? t("show") : t("hide")}
+                title={L.hidden ? t("show") : t("hide")}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleHidden(i);
+                }}
+              >
+                {L.hidden ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
+              </Button>
+            </Row>
           );
         })}
       </Card>
@@ -668,29 +732,24 @@ function FeaturedView(c: Ctx) {
       <p className="mb-2 text-sm text-muted-foreground">{t("featuredHint")}</p>
       <Card>
         {ids.length ? (
-          ids.map((i, n) => (
-            <Row key={i} id={n + 1} title={eff(i).t} sub={shName(eff(i).s)}>
-              <Button
-                size="icon-sm"
-                variant="outline"
-                aria-label={t("moveUp")}
-                disabled={!n}
-                onClick={() =>
-                  setOv((o) => {
-                    const f = [...o.featured];
-                    const k = f.indexOf(i);
-                    [f[k - 1], f[k]] = [f[k], f[k - 1]];
-                    return { ...o, featured: f };
-                  })
-                }
-              >
-                <ArrowUp className="size-4" />
-              </Button>
-              <Button size="icon-sm" variant="destructive" aria-label={t("remove")} onClick={() => setOv((o) => ({ ...o, featured: o.featured.filter((x) => x !== i) }))}>
-                <Trash2 className="size-4" />
-              </Button>
-            </Row>
-          ))
+          <Reorder
+            items={ids}
+            keyOf={(i) => i}
+            onMove={(from, to) => setOv((o) => ({ ...o, featured: move(ids, from, to) }))}
+            labels={{ up: t("moveUp"), down: t("moveDown"), drag: t("seriesView.drag") }}
+            render={(i, n) => (
+              <>
+                <span className="min-w-7 text-center font-extrabold text-primary tabular-nums">{n + 1}</span>
+                <span className="min-w-0 flex-1">
+                  <b className="block truncate font-semibold">{eff(i).t}</b>
+                  <small className="block truncate text-muted-foreground">{shName(eff(i).s)}</small>
+                </span>
+                <Button size="icon-sm" variant="ghost" aria-label={t("remove")} onClick={() => setOv((o) => ({ ...o, featured: o.featured.filter((x) => x !== i) }))}>
+                  <Trash2 className="size-4 text-destructive" />
+                </Button>
+              </>
+            )}
+          />
         ) : (
           <p className="py-6 text-center text-muted-foreground">{t("noFeatured")}</p>
         )}

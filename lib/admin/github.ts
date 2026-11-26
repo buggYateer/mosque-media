@@ -34,6 +34,17 @@ export async function readRepoFile(path: string, branch = "main"): Promise<strin
   }
 }
 
+/** File names in a folder of the repository (empty if it doesn't exist). */
+export async function listRepoDir(path: string, branch = "main"): Promise<string[]> {
+  try {
+    const items = await gh<{ name: string; type: string }[]>(`contents/${encodeURI(path)}?ref=${branch}`);
+    return Array.isArray(items) ? items.filter((x) => x.type === "file").map((x) => x.name) : [];
+  } catch (e) {
+    if (/Not Found/i.test(String(e))) return [];
+    throw e;
+  }
+}
+
 /** Commit several text files at once on top of the latest commit of `branch`. */
 export async function commitFiles(files: { path: string; content: string }[], message: string, branch = "main") {
   const ref = await gh<{ object: { sha: string } }>(`git/ref/heads/${branch}`);

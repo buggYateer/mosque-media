@@ -89,6 +89,8 @@ export const overridesSchema = z.object({
   ignore: z.array(z.number().int()).default([]),
   /** Series created from the dashboard (lessons join them with edit.series / add.series). */
   series: z.array(z.object({ key: z.string().regex(/^[\w-]+$/), title: z.string().min(1), sheikh: z.string() })).default([]),
+  /** Changes to a series from the dashboard: a new title, and/or the order of its lessons (first section). */
+  seriesEdit: z.record(z.string(), z.object({ title: z.string().optional(), order: z.array(z.number().int()).optional() })).default({}),
 });
 export type Overrides = z.infer<typeof overridesSchema>;
 
